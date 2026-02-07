@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Borel&family=Funnel+Sans:ital,wght@0,300..800;1,300..800&family=Noto+Sans+JP:wght@100..900&family=Noto+Sans+KR:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="js/player.js" type="module" defer></script>
+    <script src="js/downloader.js" type="module" defer></script>
+    <title>Echo - Personal Music App</title>
+</head>
+<body>
+    <span id="logo">Echo</span>
+    <header>
+        <button id="homeBtn"><img src="assets/home_icon.svg" alt="home"></button>
+        <form id="searchForm"> 
+            <input type="text" placeholder="What song would you like to listen to?" id="searchBar">
+            <!-- search button added -->
+            <button type="submit" id="searchBtn"><img src="assets/search_icon.svg" alt="search button"></button>
+        </form>
+        <button id="navDownloadBtn">Batch Download</button>
+    </header>
+
+    <aside id="playlistBar">
+        <button onclick="window.open('/auth/login', '_blank', 'width=500,height=600')">
+            Login with Google
+        </button>
+    </aside>
+
+    <main id="main">
+        <div id="view-container">
+            <h2></h2>
+            <p></p>
+        </div>
+    </main>
+
+    <footer id="nowPlayingBar">
+        <div class="songInfo">
+            <img class="songCover" src="assets/siacover.jpg" alt="Cover">
+            <div>
+                <h4 class="songName">Snowman</h4>
+                <p class="artistName">Sia</p>
+            </div>
+        </div>
+        <div class="songManips">
+            <div class="manipBtns">
+                <!-- shuffle and repeat added -->
+                <button id="shuffleBtn"><img src="assets/shuffle.svg" alt="shuffle button"></button>
+                <button id="previousBtn"><img src="assets/previous.svg" alt="previous song"></button>
+                <button id="pausePlayBtn"><img src="assets/play.svg" alt="play button"></button>
+                <button id="nextBtn"><img src="assets/next.svg" alt="next song"></button>
+                <button id="repeatBtn"><img src="assets/repeat.svg" alt="repeat button"></button>
+            </div>
+            <div class="player-timeline">
+                <span class="time current">0:00</span>
+                <div class="timeline">
+                    <div class="progress"></div>
+                    <div class="thumb"></div>
+                </div>
+                <span class="time total">0:00</span>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

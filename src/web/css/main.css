@@ -1,0 +1,313 @@
+/* --- Global Reset & Variables --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #111111;
+    --surface-bg: #202020;
+    --accent-blue: #1F969A;
+    --text-main: #ffffff;
+    --text-dim: #b3b3b3;
+}
+
+body{
+    background-color: var(--bg);
+    font-family: "Funnel Sans", "Noto Sans JP", "Noto Sans KR", "Noto Sans SC";
+    font-size: 16px;
+    color: var(--text-main);
+    padding: 5px 10px;
+    display: grid;
+    place-items: stretch;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 60px 1fr 90px;
+    gap: 10px;
+    height: 100vh;
+    overflow: hidden;
+}
+
+button img{
+    height: 32px;
+    width: 32px;
+}
+
+/* --- Layout Sections --- */
+#logo{
+    font-family: "Borel";
+    font-size: 38px;
+    color: var(--accent-blue);
+    grid-column: 1 / span 1;
+    grid-row: 1 / span 1;
+    /*place-self: center;*/ 
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    padding-top: 35px;
+}
+
+header{ 
+    grid-column: 2 / span 1;
+    grid-row: 1 / span 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    place-self: center;
+    gap: 15px;
+}
+
+#playlistBar{
+    grid-column: 1 / span 1;
+    grid-row: 2 / span 1;
+    background-color: var(--surface-bg);
+    border: none;
+    border-radius: 10px;
+}
+
+main{
+    grid-column: 2 / span 1;
+    grid-row: 2 / span 1;
+    overflow-y: auto;
+    padding: 30px;
+    background-color: var(--bg);
+    border: none;
+    border-radius: 10px;
+}
+
+
+/* --- Navigation & Inputs --- */
+#searchForm{
+    display: flex;
+    position: relative;
+}
+
+#searchBar{
+    background-color: var(--bg);
+    height: 50px;
+    width: 35vw;
+    border: none;
+    border-radius: 60px;
+    padding: 0px 50px 0px 25px;
+    font-family: "Funnel Sans";
+    font-size: 16px;
+    color: #EEEEEE;
+}
+
+#homeBtn , #searchBtn{
+    height: 50px;
+    width: 50px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--bg);
+}
+
+#searchBtn{ 
+    height: 45px;
+    width: 45px;
+    padding-right: 10px;
+    position: absolute;
+    right: 5px;
+    top: 55%;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+#navDownloadBtn {
+    background: transparent;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#navDownloadBtn:hover {
+    background: var(--accent-blue);
+    color: var(--bg);
+}
+
+/* --- Batch Downloader View --- */
+.batch-downloader {
+    max-width: 600px;
+}
+
+.batch-downloader textarea {
+    width: 100%;
+    height: 150px;
+    background: var(--surface-bg);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: white;
+    padding: 15px;
+    margin: 20px 0;
+    font-family: monospace;
+}
+
+#startDownloadBtn {
+    background: var(--accent-blue);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.results .item {
+    background: var(--surface-bg);
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid var(--accent-blue);
+}
+
+/* --- Player Bar (Bottom) --- */
+#nowPlayingBar{
+    grid-column: 1 / span 2;
+    grid-row: 3 /span 1;
+    display: grid;
+    grid-template-columns: 1fr 50vw 1fr;
+}
+
+.songInfo{
+    padding-left: 15px;
+    grid-column: 1 /span 1;
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 15px;
+    height: 60px;
+}
+
+.songCover{
+    height: 60px;
+    width: 60px;
+    border-radius: 5px;
+}
+
+.songInfo div h4{
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.songInfo div p{
+    font-weight: 200;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.songManips{
+    padding: 10px 0px;
+    grid-column: 2 / span 1;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.manipBtns{
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.manipBtns button{
+    background-color: var(--bg);
+    height: 30px;
+    width: 30px;
+    border-radius: 100%;
+    border: none;
+    position: relative;
+}
+
+#pausePlayBtn img{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    height: 38px;
+    width: 38px;
+}
+
+#previousBtn img, #nextBtn img{
+    height: 26px;
+    width: 26px;
+}
+
+#shuffleBtn img,  #repeatBtn img{
+    height: 20px;
+    width: 20px;
+}
+
+.player-timeline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 80%;
+    margin: auto;
+    user-select: none;
+}
+
+.time {
+    color: var(--text-dim);
+    font-size: 14px;
+    font-family: "Funnel Sans";
+    width: 40px;
+    text-align: center;
+}
+
+
+.timeline {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 6px;
+    background-color: #333;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.timeline::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background-color: #333;
+    border-radius: 3px;
+    transform: translateY(-50%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.progress {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 6px;
+    width: 30%;
+    background-color: var(--accent-blue);
+    border-radius: 3px;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.thumb {
+    position: absolute;
+    top: 50%;
+    left: 30%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background-color: var(--text-main);
+    border-radius: 50%;
+    cursor: grab; 
+    z-index: 2;
+    pointer-events: auto;
+    touch-action: none;
+}
