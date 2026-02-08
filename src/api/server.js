@@ -54,7 +54,8 @@ async function getTopVideoId(query) {
         const searchResp = await youtube.search.list({
             part: "snippet",
             q: `${query} official audio`,
-            type: "video", 
+            type: "video",
+            videoCategoryId: "10", 
             maxResults: 1,
         });
         return searchResp?.data?.items[0]?.id?.videoId || null;
