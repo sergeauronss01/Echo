@@ -21,8 +21,8 @@ body{
     padding: 5px 10px;
     display: grid;
     place-items: stretch;
-    grid-template-columns: 240px 1fr;
-    grid-template-rows: 60px 1fr 90px;
+    grid-template-columns: 90px 1fr;
+    grid-template-rows: 50px 1fr 80px;
     gap: 10px;
     height: 100vh;
     overflow: hidden;
@@ -84,11 +84,11 @@ main{
 }
 
 #searchBar{
-    background-color: var(--bg);
+    background-color: var(--surface-bg);
     height: 50px;
     width: 35vw;
     border: none;
-    border-radius: 60px;
+    border-radius: 200px;
     padding: 0px 50px 0px 25px;
     font-family: "Funnel Sans";
     font-size: 16px;
@@ -100,7 +100,7 @@ main{
     width: 50px;
     border: none;
     border-radius: 50%;
-    background-color: var(--bg);
+    background-color: var(--surface-bg);
 }
 
 #searchBtn{ 
@@ -113,6 +113,8 @@ main{
     transform: translateY(-50%);
     z-index: 2;
 }
+
+#searchBtn img{margin-left: 6px;}
 
 #navDownloadBtn {
     background: transparent;
@@ -218,7 +220,7 @@ main{
     background-color: var(--bg);
     height: 30px;
     width: 30px;
-    border-radius: 100%;
+    border-radius: 5    0%;
     border: none;
     position: relative;
 }
@@ -289,7 +291,7 @@ main{
     top: 50%;
     left: 0;
     height: 6px;
-    width: 30%;
+    width: 0%;
     background-color: var(--accent-blue);
     border-radius: 3px;
     transform: translateY(-50%);
@@ -300,7 +302,7 @@ main{
 .thumb {
     position: absolute;
     top: 50%;
-    left: 30%;
+    left: 0%;
     transform: translate(-50%, -50%);
     width: 14px;
     height: 14px;

@@ -1,4 +1,4 @@
-// --- Selectors (Updated to match your HTML) ---
+// --- Selectors ---
 const timeline = document.querySelector('.timeline');
 const progress = document.querySelector('.progress');
 const thumb = document.querySelector('.thumb');
@@ -7,7 +7,7 @@ const totalTimeEl = document.querySelector('.total');
 const pausePlayBtn = document.getElementById('pausePlayBtn');
 
 // --- State ---
-let duration = 160;
+let duration = 163;
 let current = 0;
 let isDragging = false;
 let isPlaying = false; // Start paused by default
@@ -15,6 +15,7 @@ let lastUpdate = performance.now();
 
 // --- Initialization ---
 if (totalTimeEl) totalTimeEl.textContent = formatTime(duration);
+updateUI(0);
 
 function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
@@ -31,9 +32,9 @@ function updateUI(percent) {
     if (currentTimeEl) currentTimeEl.textContent = formatTime(current);
 }
 
-function getPercentFromEvent(e) {
+function getPercentFromEvent(event) {
     const rect = timeline.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0].clientX) - rect.left;
+    const x = (event.clientX || event.touches?.[0].clientX) - rect.left;
     return x / rect.width;
 }
 
@@ -47,16 +48,16 @@ if (pausePlayBtn) {
 }
 
 if (timeline) {
-    timeline.addEventListener('mousedown', (e) => {
+    timeline.addEventListener('mousedown', (event) => {
         isDragging = true;
-        updateUI(getPercentFromEvent(e));
+        updateUI(getPercentFromEvent(event));
         document.body.style.userSelect = 'none';
     });
 }
 
-document.addEventListener('mousemove', (e) => {
+document.addEventListener('mousemove', (event) => {
     if (!isDragging) return;
-    updateUI(getPercentFromEvent(e));
+    updateUI(getPercentFromEvent(event));
 });
 
 document.addEventListener('mouseup', () => {

@@ -45,7 +45,8 @@ const ytdlp = async (url, options) => {
 
     return await execFileAsync(cmd, args);
 };
-/* --- Helpers (Re-used from your original logic) --- */
+
+/* --- Helpers --- */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function getTopVideoId(query) {

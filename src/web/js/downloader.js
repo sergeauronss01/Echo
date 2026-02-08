@@ -6,7 +6,7 @@ navDownloadBtn.addEventListener('click', async () => {
     const response = await fetch('views/batch.html');
     const html = await response.text();
     mainContainer.innerHTML = html;
-    initDownloader(); // Re-bind events after HTML is injected
+    initDownloader();
 });
 
 function initDownloader() {
@@ -15,7 +15,7 @@ function initDownloader() {
 
     btn.addEventListener("click", async () => {
         const text = document.getElementById("queries").value.trim();
-        const queries = text.split("\n").map(q => q.trim()).filter(Boolean);
+        const queries = text.split("\n").map(query => query.trim()).filter(Boolean);
         
         document.getElementById("results").innerHTML = "⏳ Processing...";
 
@@ -32,9 +32,9 @@ function initDownloader() {
 
 function renderResults(results) {
     const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = results.map(r => `
+    resultsDiv.innerHTML = results.map(result => `
         <div class="item">
-            ${r.success ? `✅ ${r.fileName}` : `❌ ${r.query}: ${r.error}`}
+            ${result.success ? `✅ ${result.fileName}` : `❌ ${result.query}: ${result.error}`}
         </div>
     `).join('');
 }
