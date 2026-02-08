@@ -54,13 +54,16 @@ async function getTopVideoId(query) {
         const searchResp = await youtube.search.list({
             part: "snippet",
             q: `${query} official audio`,
-            type: "video",
-            videoCategoryId: "10", // Category 10 is 'Music' on YouTube
+            type: "video", 
             maxResults: 1,
         });
         return searchResp?.data?.items[0]?.id?.videoId || null;
     } catch (err) {
-        console.error("Search error:", err);
+        if (err.response) {
+            console.error("❌ Google API Error:", err.response.data.error.message);
+        } else {
+            console.error("❌ Search error:", err.message);
+        }
         return null;
     }
 }
