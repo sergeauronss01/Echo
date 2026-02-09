@@ -55,16 +55,12 @@ async function getTopVideoId(query) {
             part: "snippet",
             q: `${query} official audio`,
             type: "video",
-            videoCategoryId: "10", 
+            videoCategoryId: "10", // Category 10 is 'Music' on YouTube
             maxResults: 1,
         });
         return searchResp?.data?.items[0]?.id?.videoId || null;
     } catch (err) {
-        if (err.response) {
-            console.error("❌ Google API Error:", err.response.data.error.message);
-        } else {
-            console.error("❌ Search error:", err.message);
-        }
+        console.error("Search error:", err);
         return null;
     }
 }
