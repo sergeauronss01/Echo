@@ -38,15 +38,14 @@ button img{
 /* --- Layout Sections --- */
 #logo{
     font-family: "Borel";
-    font-size: 38px;
+    font-size: 34px;
     color: var(--accent-blue);
     grid-column: 1 / span 1;
-    grid-row: 1 / span 1;
-    /*place-self: center;*/ 
+    grid-row: 1 / span 1; 
     display: flex;
     align-items: center;
-    padding-left: 20px;
-    padding-top: 35px;
+    margin-left: 7px;
+    margin-top: 35px;
 }
 
 header{ 

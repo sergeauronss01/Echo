@@ -35,15 +35,24 @@ try {
 /* --- yt-dlp Logic --- */
 const ytdlp = async (url, options) => {
     const cmd = os.platform() === "win32" ? "python" : "python3";
-    const args = ["-m", "yt_dlp", url]; 
-
+    const args = ["-m", "yt_dlp"]; 
     for (const [key, value] of Object.entries(options)) {
         const cliKey = `--${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}`;
-        if (typeof value === "boolean") { value && args.push(cliKey); } 
-        else { args.push(cliKey, String(value)); }
+        if (typeof value === "boolean") { 
+            if (value) args.push(cliKey);
+        } else { 
+            args.push(cliKey, String(value)); 
+        }
     }
-
-    return await execFileAsync(cmd, args);
+    args.push(url);
+    try {
+        const result = await execFileAsync(cmd, args);
+        console.log("Download log:", result.stdout);
+        return result;
+    } catch (error) {
+        console.error("yt-dlp failed:", error.stderr); 
+        throw error;
+    }
 };
 
 /* --- Helpers --- */
@@ -77,6 +86,8 @@ async function waitForFile(dir, beforeSet) {
 }
 
 /* --- Routes --- */
+const sanitizedDir = DOWNLOAD_DIR.split(path.sep).join('/');
+const outputTemplate = `${sanitizedDir}/%(title)s.%(ext)s`;
 app.post("/api/batch-download", async (req, res) => {
     const { queries } = req.body;
     const results = [];
@@ -88,7 +99,7 @@ app.post("/api/batch-download", async (req, res) => {
     
             const beforeSet = new Set(await fsp.readdir(DOWNLOAD_DIR));
             await ytdlp(`https://www.youtube.com/watch?v=${videoId}`, {
-                output: path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
+                output: outputTemplate,
                 extractAudio: true,
                 audioFormat: "mp3",
             });

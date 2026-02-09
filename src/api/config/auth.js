@@ -27,4 +27,5 @@ export const authorizationUrl = oauth2Client.generateAuthUrl({
 export const youtube = google.youtube({
     version: "v3",
     auth: process.env.YT_API_KEY,
+    headers: {'Referer': 'http://localhost:3000'}
 });
