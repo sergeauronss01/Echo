@@ -64,7 +64,6 @@ async function getTopVideoId(query) {
             part: "snippet",
             q: `${query} official audio`,
             type: "video",
-            videoCategoryId: "10", // Category 10 is 'Music' on YouTube
             maxResults: 1,
         });
         return searchResp?.data?.items[0]?.id?.videoId || null;
