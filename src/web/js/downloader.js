@@ -1,15 +1,9 @@
-const mainContainer = document.getElementById('view-container');
-const navDownloadBtn = document.getElementById('navDownloadBtn');
+// --- Batch Download Module ---
+// Handles batch downloading through API
 
-// Navigation Logic
-navDownloadBtn.addEventListener('click', async () => {
-    const response = await fetch('views/batch.html');
-    const html = await response.text();
-    mainContainer.innerHTML = html;
-    initDownloader();
-});
+import { api } from './api.js';
 
-function initDownloader() {
+export async function initDownloader() {
     const btn = document.getElementById("startDownloadBtn");
     if (!btn) return;
 
@@ -17,24 +11,41 @@ function initDownloader() {
         const text = document.getElementById("queries").value.trim();
         const queries = text.split("\n").map(query => query.trim()).filter(Boolean);
         
-        document.getElementById("results").innerHTML = "⏳ Processing...";
+        if (!queries.length) {
+            document.getElementById("results").innerHTML = '<p class="error-message">Please enter at least one query</p>';
+            return;
+        }
 
-        const res = await fetch("/api/batch-download", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ queries })
-        });
+        document.getElementById("results").innerHTML = '<div class="loading">⏳ Processing...</div>';
 
-        const data = await res.json();
-        renderResults(data.results);
+        try {
+            const data = await api.batchDownload(queries);
+            renderResults(data.results || data.data?.results || []);
+        } catch (error) {
+            document.getElementById("results").innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+        }
     });
 }
 
 function renderResults(results) {
     const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = results.map(result => `
-        <div class="item">
-            ${result.success ? `✅ ${result.fileName}` : `❌ ${result.query}: ${result.error}`}
+    if (!results || results.length === 0) {
+        resultsDiv.innerHTML = '<p>No results</p>';
+        return;
+    }
+
+    resultsDiv.innerHTML = `
+        <div class="results-list">
+            ${results.map(result => `
+                <div class="result-item ${result.success ? 'success' : 'error'}">
+                    <span class="result-icon">${result.success ? '✅' : '❌'}</span>
+                    <span class="result-query">${result.query || 'Unknown'}</span>
+                    ${result.success ? 
+                        `<span class="result-file">${result.fileName}</span>` :
+                        `<span class="result-error">${result.error}</span>`
+                    }
+                </div>
+            `).join('')}
         </div>
-    `).join('');
+    `;
 }

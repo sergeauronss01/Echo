@@ -7,21 +7,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Borel&family=Funnel+Sans:ital,wght@0,300..800;1,300..800&family=Noto+Sans+JP:wght@100..900&family=Noto+Sans+KR:wght@100..900&family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/main.css">
+    <script src="js/api.js" type="module" defer></script>
+    <script src="js/auth.js" type="module" defer></script>
+    <script src="js/ui.js" type="module" defer></script>
     <script src="js/player.js" type="module" defer></script>
     <script src="js/downloader.js" type="module" defer></script>
+    <script src="js/modules/fingerprinting.js" type="module" defer></script>
+    <script src="js/main.js" type="module" defer></script>
     <title>Echo - Personal Music App</title>
 </head>
 <body>
     <span id="logo">Echo</span>
     <header>
-        <button id="homeBtn"><img src="assets/home_icon.svg" alt="home"></button>
-        <form id="searchForm"> 
+        <button id="homeBtn" title="Home"><img src="assets/home_icon.svg" alt="home"></button>
+        <form id="searchForm">
             <input type="text" placeholder="What song would you like to listen to?" id="searchBar">
             <button type="submit" id="searchBtn"><img src="assets/search_icon.svg" alt="search button"></button>
         </form>
-        <button id="navDownloadBtn">Batch Download</button>
-        <button id="logInBtn" onclick="window.open('/auth/login', '_blank', 'width=500,height=600')">Log in</button>
-        <button id="account"><img src="assets/siacover.jpg" alt=""></button>
+        <button id="navLibraryBtn" title="My Library">🎵 Library</button>
+        <button id="navHistoryBtn" title="Listening History">📊 History</button>
+        <button id="navDownloadBtn" title="Batch Download">⬇️ Download</button>
+        <button id="navFingerprintBtn" title="Identify Song">🎧 Identify</button>
+        <button id="logInBtn" class="btn-primary">Log in</button>
+        <button id="account" class="account-btn" title="Account"><img src="assets/siacover.jpg" alt=""></button>
     </header>
 
     <aside id="playlistBar">
@@ -49,12 +57,12 @@
                 <button id="repeatBtn"><img src="assets/repeat.svg" alt="repeat button"></button>
             </div>
             <div class="player-timeline">
-                <span class="time current">0:00</span>
+                <span class="time current">--:--</span>
                 <div class="timeline">
                     <div class="progress"></div>
                     <div class="thumb"></div>
                 </div>
-                <span class="time total">0:00</span>
+                <span class="time total">--:--</span>
             </div>
         </div>
     </footer>

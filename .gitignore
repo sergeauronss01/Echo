@@ -4,3 +4,5 @@ node_modules
 Scripts
 share
 .vscode
+COMPLETION_SUMMARY.md
+IMPLEMENTATION_GUIDE.md

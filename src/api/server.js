@@ -1,141 +1,91 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import os from "os";
-import path from "path";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { promises as fsp } from "fs";
-import { execFile, execSync } from "child_process";
-import { promisify } from "util";
-import { youtube } from "./config/auth.js";
-import { oauth2Client, authorizationUrl } from './config/auth.js';
 import open from 'open';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const execFileAsync = promisify(execFile);
-dotenv.config();
+dotenv.config({ override: true});
+
+import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
+import authRoutes from './modules/auth/auth.routes.js';
+import usersRoutes from './modules/users/users.routes.js';
+import songsRoutes from './modules/songs/songs.routes.js';
+import playlistsRoutes from './modules/playlists/playlists.routes.js';
+import downloadRoutes from './modules/download/download.routes.js';
+import historyRoutes from './modules/history/history.routes.js';
+import fingerprintingRoutes from './modules/fingerprinting/fingerprinting.routes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "../web")));
-
 const PORT = process.env.PORT || 3000;
-const DOWNLOAD_DIR = path.join(os.homedir(), "Downloads", "yt-batch-downloader");
 
-/* --- Setup --- */
-await fsp.mkdir(DOWNLOAD_DIR, { recursive: true });
+/* --- Security & Middleware --- */
+app.use(helmet());
 
-try {
-    execSync("ffmpeg -version", { stdio: "ignore" });
-} catch (e) {
-    console.error("Critical Error: ffmpeg not found.");
-}
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+});
+app.use(limiter);
 
-/* --- yt-dlp Logic --- */
-const ytdlp = async (url, options) => {
-    const cmd = os.platform() === "win32" ? "python" : "python3";
-    const args = ["-m", "yt_dlp"]; 
-    for (const [key, value] of Object.entries(options)) {
-        const cliKey = `--${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}`;
-        if (typeof value === "boolean") { 
-            if (value) args.push(cliKey);
-        } else { 
-            args.push(cliKey, String(value)); 
-        }
-    }
-    args.push(url);
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true,
+}));
+
+app.use(express.static(path.join(__dirname, '../web')));
+
+/* --- Mount module routes --- */
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/songs', songsRoutes);
+app.use('/api/playlists', playlistsRoutes);
+app.use('/api/download', downloadRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/fingerprinting', fingerprintingRoutes);
+
+/* --- Health & Root --- */
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+    });
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/index.html'));
+});
+
+import { runMigrations } from './utils/runMigrations.js';
+await runMigrations();
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+const server = app.listen(PORT, async () => {
     try {
-        const result = await execFileAsync(cmd, args);
-        console.log("Download log:", result.stdout);
-        return result;
-    } catch (error) {
-        console.error("yt-dlp failed:", error.stderr); 
-        throw error;
-    }
-};
-
-/* --- Helpers --- */
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function getTopVideoId(query) {
-    try {
-        const searchResp = await youtube.search.list({
-            part: "snippet",
-            q: `${query} official audio`,
-            type: "video",
-            maxResults: 1,
-        });
-        return searchResp?.data?.items[0]?.id?.videoId || null;
-    } catch (err) {
-        console.error("Search error:", err);
-        return null;
-    }
-}
-
-async function waitForFile(dir, beforeSet) {
-    const start = Date.now();
-    while (Date.now() - start < 60000) {
-        const files = await fsp.readdir(dir);
-        const newest = files.find(f => f.endsWith(".mp3") && !beforeSet.has(f));
-        if (newest) return newest;
-        await sleep(1000);
-    }
-    throw new Error("File timeout");
-}
-
-/* --- Routes --- */
-const sanitizedDir = DOWNLOAD_DIR.split(path.sep).join('/');
-const outputTemplate = `${sanitizedDir}/%(title)s.%(ext)s`;
-app.post("/api/batch-download", async (req, res) => {
-    const { queries } = req.body;
-    const results = [];
-
-    for (const query of queries) {
-        try {
-            const videoId = await getTopVideoId(query);
-            if (!videoId) throw new Error("Not found");
-    
-            const beforeSet = new Set(await fsp.readdir(DOWNLOAD_DIR));
-            await ytdlp(`https://www.youtube.com/watch?v=${videoId}`, {
-                output: outputTemplate,
-                extractAudio: true,
-                audioFormat: "mp3",
-            });
-
-            const fileName = await waitForFile(DOWNLOAD_DIR, beforeSet);
-            results.push({ query, fileName, success: true });
-        } catch (err) {
-            results.push({ query, error: err.message, success: false });
-        }
-    }
-    res.json({ results });
+        await open(`http://localhost:${PORT}`);
+        console.log(`🎵 Song Manager running on http://localhost:${PORT}`);
+        console.log(`📡 API available at http://localhost:${PORT}/api`);
+        console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+    } catch (e) {}
 });
 
-app.use("/downloads", express.static(DOWNLOAD_DIR));
-app.listen(PORT, async () => {
-    console.log(`🚀 Server on http://localhost:${PORT}`);
-    await open(`http://localhost:${PORT}`);
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
 });
 
-/*
-* Authentication with Google 
-*/
-// Route to start the login process
-// 1. When the user clicks "Login", send them to Google
-app.get('/auth/login', (req, res) => {
-    res.redirect(authorizationUrl);
-});
-
-// 2. Google sends the user back here with a "code"
-app.get('/auth/callback', async (req, res) => {
-    const { code } = req.query;
-    try {
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-        console.log("Successfully authenticated with Google!");
-        res.send("<script>window.close();</script> Authentication successful! You can close this tab.");
-    } catch (error) {
-        res.status(500).send("Authentication failed.");
-    }
-});
+export default app;
