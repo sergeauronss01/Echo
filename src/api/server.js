@@ -6,8 +6,10 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import open from 'open';
+import { validateEnvironment } from './config/environment.js';
 
 dotenv.config({ override: true});
+validateEnvironment();
 
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
@@ -61,6 +63,38 @@ app.get('/health', (req, res) => {
     });
 });
 
+app.get('/health/dependencies', (req, res) => {
+    const { execFileSync } = require('child_process');
+    const checks = {
+        node: 'ok',
+        python: 'ok',
+        ffmpeg: 'ok',
+        database: 'ok'
+    };
+
+    try {
+        const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+        const version = execFileSync(pythonCmd, ['--version'], { encoding: 'utf8' });
+        checks.python = version.trim();
+    } catch {
+        checks.python = 'missing or not in PATH';
+    }
+
+    try {
+        const ffmpegCmd = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+        execFileSync(ffmpegCmd, ['-version'], { stdio: 'ignore' });
+        checks.ffmpeg = 'ok';
+    } catch {
+        checks.ffmpeg = 'missing or not in PATH';
+    }
+
+    res.json({
+        status: 'ok',
+        checks,
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../web/index.html'));
 });
@@ -72,12 +106,15 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const server = app.listen(PORT, async () => {
-    try {
-        await open(`http://localhost:${PORT}`);
-        console.log(`🎵 Song Manager running on http://localhost:${PORT}`);
-        console.log(`📡 API available at http://localhost:${PORT}/api`);
-        console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-    } catch (e) {}
+    console.log(`🎵 Song Manager running on http://localhost:${PORT}`);
+    console.log(`📡 API available at http://localhost:${PORT}/api`);
+    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+
+    if (process.env.NODE_ENV !== 'production') {
+        try {
+            await open(`http://localhost:${PORT}`);
+        } catch (e) {}
+    }
 });
 
 process.on('SIGTERM', () => {

@@ -1,15 +1,19 @@
-import { execFile } from 'child_process';
+import songsService from '../songs/songs.service.js';
 import { promisify } from 'util';
 import { query } from '../../config/database.js';
 import { google } from 'googleapis';
 import { AppError } from '../../middleware/error.middleware.js';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import musicBrainzService from '../../services/musicbrainz.service.js';
+import scoringService from '../../services/scoring.service.js';
+import musixmatchService from '../../services/musixmatch.service.js';
 
 const execFileAsync = promisify(execFile);
 const readdirAsync = promisify(fs.readdir);
 
-const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(process.env.HOME || process.env.USERPROFILE, 'Downloads', 'yt-batch-downloader');
+const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(os.homedir(), 'Downloads', 'echo-downloads');
 const YT_API = google.youtube({ version: 'v3', auth: process.env.YT_API_KEY });
 
 export class DownloadService {
@@ -30,6 +34,114 @@ export class DownloadService {
             return null;
         } catch (err) {
             console.error(`Error searching for ${query_text}:`, err.message);
+            return null;
+        }
+    }
+
+    async getVideoDetails(videoId) {
+        try {
+            const response = await YT_API.videos.list({
+                part: 'snippet,contentDetails',
+                id: videoId,
+            });
+
+            if (response.data.items && response.data.items.length > 0) {
+                const item = response.data.items[0];
+                return {
+                    title: item.snippet.title,
+                    description: item.snippet.description,
+                    duration: this.isoToDurationMs(item.contentDetails.duration),
+                };
+            }
+
+            return null;
+        } catch (err) {
+            console.error(`Error fetching video details for ${videoId}:`, err.message);
+            return null;
+        }
+    }
+
+    isoToDurationMs(isoDuration) {
+        const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+        const matches = isoDuration.match(regex);
+        if (!matches) return 0;
+        const hours = parseInt(matches[1]) || 0;
+        const minutes = parseInt(matches[2]) || 0;
+        const seconds = parseInt(matches[3]) || 0;
+        return (hours * 3600 + minutes * 60 + seconds) * 1000;
+    }
+
+    parseMetadata(title, description) {
+        const titleLower = title.toLowerCase();
+
+        const artistPatterns = [
+            /^(.*?)\s*[-–]\s*(.*?)(?:\s*\(|$)/,
+            /^(.*?)\s*[-–]\s*/,
+        ];
+
+        let artist = 'Unknown';
+        let parsedTitle = title;
+
+        for (const pattern of artistPatterns) {
+            const match = title.match(pattern);
+            if (match) {
+                artist = match[1]?.trim() || 'Unknown';
+                parsedTitle = match[2]?.trim() || title;
+                break;
+            }
+        }
+
+        return {
+            title: parsedTitle,
+            artist: artist,
+            description: description || '',
+        };
+    }
+
+    async enrichWithMusicBrainz(title, artist, durationMs) {
+        try {
+            const candidates = await musicBrainzService.searchByTitleArtistDuration(
+                title,
+                artist,
+                durationMs
+            );
+
+            if (candidates.length === 0) {
+                return {
+                    mbid: null,
+                    score: 0,
+                    candidates: [],
+                    reviewNeeded: false,
+                };
+            }
+
+            const scored = scoringService.scoreCandidates(title, artist, durationMs, candidates);
+            const topMatch = scored[0];
+
+            return {
+                mbid: topMatch.mbid,
+                score: topMatch.score,
+                candidates: scored.slice(0, 5),
+                reviewNeeded: scoringService.requiresReview(topMatch.score),
+                autoAccepted: scoringService.isAutoAcceptable(topMatch.score),
+            };
+        } catch (err) {
+            console.error('MusicBrainz enrichment failed:', err.message);
+            return {
+                mbid: null,
+                score: 0,
+                candidates: [],
+                review_needed: false,
+            };
+        }
+    }
+
+    async enrichWithLyrics(title, artist) {
+        try {
+            const lyrics = await musixmatchService.searchLyrics(title, artist);
+            return lyrics || null;
+        } catch (err) {
+            console.warn('Lyrics enrichment failed:', err.message);
             return null;
         }
     }
@@ -90,9 +202,9 @@ export class DownloadService {
         const results = [];
 
         for (const queryText of queries) {
-            const query_trimmed = queryText.trim();
+            const queryTrimmed = queryText.trim();
 
-            if (!query_trimmed) {
+            if (!queryTrimmed) {
                 results.push({
                     query: queryText,
                     success: false,
@@ -102,7 +214,7 @@ export class DownloadService {
             }
 
             try {
-                const videoId = await this.getTopVideoId(query_trimmed);
+                const videoId = await this.getTopVideoId(queryTrimmed);
 
                 if (!videoId) {
                     results.push({
@@ -116,7 +228,7 @@ export class DownloadService {
                 const beforeFiles = new Set(fs.readdirSync(DOWNLOAD_DIR));
 
                 const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                const downloadSuccess = await this.downloadSong(youtubeUrl, query_trimmed);
+                const downloadSuccess = await this.downloadSong(youtubeUrl, queryTrimmed);
 
                 if (!downloadSuccess) {
                     results.push({
@@ -136,14 +248,54 @@ export class DownloadService {
                     [videoId]
                 );
 
+                let enrichmentData = {
+                    mbid: null,
+                    score: 0,
+                    candidates: [],
+                    lyrics: null,
+                    reviewNeeded: false,
+                };
+
+                let title = queryTrimmed;
+                let artist = 'Unknown';
+
                 if (song.rows.length === 0) {
-                    const songResult = await query(
-                        `INSERT INTO songs (youtube_id, title, artist, file_path, file_size)
-                         VALUES ($1, $2, $3, $4, $5)
-                         RETURNING id, youtube_id, title, artist`,
-                        [videoId, query_trimmed, 'Unknown', filePath, fileStats.size]
-                    );
-                    song = songResult.rows[0];
+                    const videoDetails = await this.getVideoDetails(videoId);
+
+                    if (videoDetails) {
+                        const parsed = this.parseMetadata(videoDetails.title, videoDetails.description);
+                        title = parsed.title;
+                        artist = parsed.artist;
+
+                        enrichmentData = await this.enrichWithMusicBrainz(
+                            title,
+                            artist,
+                            videoDetails.duration
+                        );
+
+                        if (enrichmentData.mbid) {
+                            enrichmentData.lyrics = await this.enrichWithLyrics(title, artist);
+                        }
+
+                        console.log(`📍 Song enrichment: "${title}" by ${artist}, Score: ${enrichmentData.score}, MBID: ${enrichmentData.mbid}`);
+                    }
+
+                    song = await songsService.createSong({
+                        youtubeId: videoId,
+                        title,
+                        artist,
+                        filePath,
+                        mbid: enrichmentData.mbid || null,
+                    });
+
+                    if (enrichmentData.lyrics && song.id) {
+                        await songsService.storeLyrics(
+                            song.id,
+                            enrichmentData.lyrics.lyrics,
+                            enrichmentData.lyrics.source,
+                            enrichmentData.lyrics.sourceId
+                        ).catch(err => console.warn('Failed to store lyrics:', err.message));
+                    }
                 } else {
                     song = song.rows[0];
                     await query(
@@ -166,6 +318,7 @@ export class DownloadService {
                     songId: song.id,
                     fileName,
                     success: true,
+                    enrichment: enrichmentData,
                 });
             } catch (err) {
                 results.push({

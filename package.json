@@ -6,14 +6,15 @@
   "type": "module",
   "scripts": {
     "start": "node src/api/server.js",
-    "dev": "nodemon src/api/server.js",
+    "dev": "NODE_ENV=development nodemon src/api/server.js",
     "migrate": "node src/api/utils/runMigrations.js",
     "test": "jest --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:integration": "jest --testPathPattern=integration",
     "lint": "eslint src/ --fix",
     "build": "echo \"Build complete\"",
-    "seed": "node src/api/utils/seedDatabase.js"
+    "seed": "node src/api/utils/seedDatabase.js",
+    "setup": "npm install && python -m pip install -r requirements.txt && npm run migrate"
   },
   "keywords": [
     "music",
@@ -36,6 +37,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
     "open": "^11.0.0",
+    "p-queue": "^7.4.1",
     "pg": "^8.11.3",
     "pg-boss": "^10.0.1"
   },
