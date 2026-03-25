@@ -13,7 +13,7 @@ const httpQueue = new PQueue({
 
 export class MusicBrainzService {
     constructor() {
-        this.userAgent = 'Echo/1.0 (https://github.com/yourusername/echo)';
+        this.userAgent = 'Echo/1.0 (https://github.com/sergeauronss01/Echo)';
     }
 
     async searchRecording(query) {
@@ -41,22 +41,55 @@ export class MusicBrainzService {
     }
 
     async searchByTitleArtistDuration(title, artist, durationMs) {
-        const durationSec = Math.round(durationMs / 1000);
-        const query = `recording:"${title}" AND artist:"${artist}" AND length:${durationSec}`;
+        // 1. Clean the title of "junk" so MusicBrainz can find it
+        const cleanTitle = title
+            .replace(/\(Official.*\)|\[Official.*\]/gi, '')
+            .replace(/official\s+(video|audio|music\s+video)/gi, '')
+            .trim();
 
-        const recordings = await this.searchRecording(query);
-        return this.enrichRecordings(recordings);
+        // 2. BROAD SEARCH: Remove "AND length" to stop silent failures
+        const queryStr = `recording:"${cleanTitle}" AND artist:"${artist}"`;
+        
+        try {
+            const response = await fetch(`${MUSICBRAINZ_API}/recording/?query=${encodeURIComponent(queryStr)}&fmt=json&limit=5`, {
+                headers: { 'User-Agent': this.userAgent }
+            });
+            const data = await response.json();
+            const candidates = this.enrichRecordings(data.recordings || []);
+
+            return {
+                mbid: candidates.length > 0 ? candidates[0].mbid : null,
+                candidates: candidates
+            };
+        } catch (err) {
+            console.error('MusicBrainz search failed:', err.message);
+            return { mbid: null, candidates: [] };
+        }
     }
 
     enrichRecordings(recordings) {
-        return recordings.map(rec => ({
-            mbid: rec.id,
-            title: rec.title,
-            artistCredit: rec['artist-credit']?.map(ac => ac.artist?.name).join(', '),
-            duration: rec.length,
-            releaseGroups: rec['release-groups']?.slice(0, 3) || [],
-            disambiguation: rec.disambiguation,
-        }));
+        return recordings.map(rec => {
+            const year = rec['first-release-date'] ? rec['first-release-date'].split('-')[0] : null;
+            const releaseGroup = rec['release-groups']?.[0];
+            const album = releaseGroup?.title || null;
+            const genre = rec.tags?.sort((a, b) => b.count - a.count)[0]?.name || null;
+
+            const coverArtUrl = releaseGroup?.id 
+                ? `https://coverartarchive.org/release-group/${releaseGroup.id}/front` 
+                : null;
+
+            return {
+                mbid: rec.id,
+                title: rec.title,
+                artistCredit: rec['artist-credit']?.map(ac => ac.artist?.name).join(', '),
+                duration: rec.length,
+                year: year,
+                album: album,
+                genre: genre,
+                coverArtUrl: coverArtUrl, // New Field from MusicBrainz
+                score: rec.score
+            };
+        });
     }
 
     async getRecordingDetails(mbid) {

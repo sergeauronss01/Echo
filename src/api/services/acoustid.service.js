@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import PQueue from 'p-queue';
-import { AppError } from '../../middleware/error.middleware.js';
+import { AppError } from '../middleware/error.middleware.js';
 
 const ACOUSTID_API = 'https://api.acoustid.org/v2';
 const RATE_LIMIT_MS = 350;

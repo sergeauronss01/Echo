@@ -12,6 +12,8 @@ router.get('/', optional, (req, res, next) => songsController.getAll(req, res, n
 
 router.get('/search', optional, validate(songValidations.search, 'query'), (req, res, next) => songsController.search(req, res, next));
 
+router.get('/:songId/stream', optional, (req, res, next) => songsController.stream(req, res, next));
+
 router.get('/:songId', optional, (req, res, next) => songsController.get(req, res, next));
 
 export default router;

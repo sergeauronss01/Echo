@@ -12,8 +12,6 @@ export class EnvironmentValidator {
     validate() {
         this.validateRequiredEnvVars();
         this.validatePythonEnvironment();
-        this.validateFFmpeg();
-        this.validateDownloadDirectory();
         this.validateSecrets();
 
         if (this.errors.length > 0) {
@@ -113,37 +111,6 @@ export class EnvironmentValidator {
         }
     }
 
-    validateFFmpeg() {
-        try {
-            const ffmpegCmd = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
-            execFileSync(ffmpegCmd, ['-version'], { stdio: 'ignore' });
-            console.log('✓ FFmpeg available');
-        } catch {
-            this.errors.push(
-                'FFmpeg not found or not in PATH. Required by yt-dlp for audio extraction. Install FFmpeg and add to PATH.'
-            );
-        }
-    }
-
-    validateDownloadDirectory() {
-        try {
-            const downloadDir =
-                process.env.DOWNLOAD_DIR ||
-                path.join(os.homedir(), 'Downloads', 'echo-downloads');
-
-            if (!fs.existsSync(downloadDir)) {
-                fs.mkdirSync(downloadDir, { recursive: true });
-                console.log(`✓ Created download directory: ${downloadDir}`);
-            } else {
-                fs.accessSync(downloadDir, fs.constants.W_OK);
-                console.log(`✓ Download directory writable: ${downloadDir}`);
-            }
-
-            process.env.DOWNLOAD_DIR = downloadDir;
-        } catch (err) {
-            this.errors.push(`Download directory not writable: ${err.message}`);
-        }
-    }
 }
 
 export function validateEnvironment() {

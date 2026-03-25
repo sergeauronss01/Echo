@@ -18,7 +18,8 @@ export class HistoryService {
     async getUserHistory(userId, page = 1, limit = 50, startDate = null, endDate = null) {
         const offset = (page - 1) * limit;
 
-        let queryText = `SELECT lh.*, s.title, s.artist, s.duration FROM listening_history lh
+        let queryText = `SELECT lh.*, s.title, s.artist, s.duration, s.cover_art_url
+                        FROM listening_history lh
                         JOIN songs s ON lh.song_id = s.id
                         WHERE lh.user_id = $1`;
         const params = [userId];

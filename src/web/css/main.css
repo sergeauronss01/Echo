@@ -217,12 +217,14 @@ main{
     align-items: center;
     align-self: center;
     gap: 15px;
-    height: 60px;
+    height: 80px;
 }
 
 .songCover{
     height: 60px;
     width: 60px;
+    object-fit: cover;
+    object-position: center;
     border-radius: 5px;
 }
 
@@ -474,6 +476,42 @@ main{
     gap: 20px;
 }
 
+/* Home sections behave like horizontal carousels (Netflix-style) */
+.home-view .songs-grid,
+.home-view .playlists-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 5px;
+    scroll-behavior: smooth;
+}
+
+.home-view .songs-grid::-webkit-scrollbar,
+.home-view .playlists-grid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.home-view .songs-grid::-webkit-scrollbar-track,
+.home-view .playlists-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.home-view .songs-grid::-webkit-scrollbar-thumb,
+.home-view .playlists-grid::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+/* Fixed-size cards inside home carousels so they don't shrink */
+.home-view .song-card,
+.home-view .playlist-card {
+    flex: 0 0 180px; /* fixed width, no grow, no shrink */
+    max-width: 180px;
+}
+
 .song-card, .playlist-card {
     background: var(--surface-bg);
     border-radius: 8px;
@@ -492,8 +530,8 @@ main{
 .song-cover, .playlist-cover {
     position: relative;
     width: 100%;
-    aspect-ratio: 1;
     overflow: hidden;
+    aspect-ratio: 1 / 1; 
     display: flex;
     align-items: center;
     justify-content: center;
@@ -503,7 +541,9 @@ main{
 .song-cover img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover; 
+    object-position: center; 
+    display: block;
 }
 
 .play-btn, .play-btn-playlist {

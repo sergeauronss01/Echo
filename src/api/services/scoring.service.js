@@ -28,38 +28,61 @@ export class ScoringService {
     scoreTitle(source, candidate) {
         if (!source || !candidate) return 0;
 
-        const sourceLower = source.toLowerCase().trim();
-        const candidateLower = candidate.toLowerCase().trim();
+        const s = source.toLowerCase().replace(/\(.*\)|\[.*\]/g, '').trim();
+        const c = candidate.toLowerCase().replace(/\(.*\)|\[.*\]/g, '').trim();
 
-        if (sourceLower === candidateLower) return 1.0;
+        // Perfect match after cleaning
+        if (s === c) return 1.0;
 
-        const similarity = this.stringSimilarity(sourceLower, candidateLower);
+        // Check for containment (e.g., "Babydoll" inside "Babydoll - Remastered")
+        if (c.includes(s) || s.includes(c)) return 0.85;
+
+        // Fallback to similarity for typos
+        const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
     }
 
     scoreArtist(source, candidate) {
         if (!source || !candidate) return 0;
 
-        const sourceLower = source.toLowerCase().trim();
-        const candidateLower = candidate.toLowerCase().trim();
+        const s = source.toLowerCase().trim();
+        const c = candidate.toLowerCase().trim();
 
-        if (sourceLower === candidateLower) return 1.0;
+        // 1. Exact match
+        if (s === c) return 1.0;
 
-        const similarity = this.stringSimilarity(sourceLower, candidateLower);
+        // 2. Partial match (e.g., "Rose Depp" vs "Lily-Rose Depp")
+        if (c.includes(s) || s.includes(c)) return 0.95;
+
+        // 3. Handle multiple artists (e.g., "The Weeknd, Jennie" contains "Jennie")
+        const sParts = s.split(/[,&]|\bfeat\b|\bft\b/).map(p => p.trim());
+        const cParts = c.split(/[,&]|\bfeat\b|\bft\b/).map(p => p.trim());
+        
+        const hasOverlap = sParts.some(sp => cParts.some(cp => cp.includes(sp) || sp.includes(cp)));
+        if (hasOverlap) return 0.90;
+
+        // 4. Levenshtein fallback for minor typos
+        const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
     }
 
     scoreDuration(sourceDuration, candidateDuration) {
-        if (!sourceDuration || !candidateDuration) return 0;
+        if (!sourceDuration || !candidateDuration) return 0.5; // Neutral score if missing
 
         const sourceMs = typeof sourceDuration === 'string' ? parseInt(sourceDuration) : sourceDuration;
         const candidateMs = typeof candidateDuration === 'string' ? parseInt(candidateDuration) : candidateDuration;
 
         const diffMs = Math.abs(sourceMs - candidateMs);
-        const tolerance = 5000;
+        
+        // INCREASE TOLERANCE to 30 seconds
+        const tolerance = 30000; 
 
         if (diffMs <= tolerance) {
+            // High score for close matches
             return 1.0 - (diffMs / tolerance) * 0.5;
+        } else if (diffMs <= 60000) {
+            // Still give some points for being within a minute
+            return 0.2;
         }
 
         return 0;

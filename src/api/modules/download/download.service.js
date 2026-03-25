@@ -1,5 +1,6 @@
 import songsService from '../songs/songs.service.js';
-import { promisify } from 'util';
+import { promisify } from 'node:util';
+import { execFile } from 'node:child_process';
 import { query } from '../../config/database.js';
 import { google } from 'googleapis';
 import { AppError } from '../../middleware/error.middleware.js';
@@ -8,7 +9,8 @@ import path from 'path';
 import os from 'os';
 import musicBrainzService from '../../services/musicbrainz.service.js';
 import scoringService from '../../services/scoring.service.js';
-import musixmatchService from '../../services/musixmatch.service.js';
+import LrclibService from '../../services/Lrclib.service.js';
+import { createClient } from '@supabase/supabase-js';
 
 const execFileAsync = promisify(execFile);
 const readdirAsync = promisify(fs.readdir);
@@ -16,10 +18,15 @@ const readdirAsync = promisify(fs.readdir);
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(os.homedir(), 'Downloads', 'echo-downloads');
 const YT_API = google.youtube({ version: 'v3', auth: process.env.YT_API_KEY });
 
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export class DownloadService {
-    async getTopVideoId(query_text) {
+    async getTopVideoId(queryText) {
         try {
-            const searchText = `${query_text} official audio`;
+            const searchText = `${queryText} official audio`;
             const response = await YT_API.search.list({
                 part: 'snippet',
                 q: searchText,
@@ -33,7 +40,7 @@ export class DownloadService {
 
             return null;
         } catch (err) {
-            console.error(`Error searching for ${query_text}:`, err.message);
+            console.error(`Error searching for ${queryText}:`, err.message);
             return null;
         }
     }
@@ -71,9 +78,16 @@ export class DownloadService {
         return (hours * 3600 + minutes * 60 + seconds) * 1000;
     }
 
-    parseMetadata(title, description) {
-        const titleLower = title.toLowerCase();
+    cleanSearchTerm(text) {
+        return text
+            .replace(/\(official.*\)/gi, '')
+            .replace(/\[official.*\]/gi, '')
+            .replace(/\(lyrics.*\)/gi, '')
+            .replace(/ft\.|feat\./gi, '')
+            .trim();
+    }
 
+    parseMetadata(title, description) {
         const artistPatterns = [
             /^(.*?)\s*[-–]\s*(.*?)(?:\s*\(|$)/,
             /^(.*?)\s*[-–]\s*/,
@@ -100,45 +114,70 @@ export class DownloadService {
 
     async enrichWithMusicBrainz(title, artist, durationMs) {
         try {
-            const candidates = await musicBrainzService.searchByTitleArtistDuration(
+            // 1. Fetch data from the service
+            const response = await musicBrainzService.searchByTitleArtistDuration(
                 title,
                 artist,
                 durationMs
             );
 
-            if (candidates.length === 0) {
+            // 2. Validate the response structure (Handle both array or object types)
+            const candidateList = Array.isArray(response) ? response : (response?.candidates || []);
+
+            if (candidateList.length === 0) {
+                console.log(`[MusicBrainz] No results found for: ${title}`);
                 return {
                     mbid: null,
                     score: 0,
                     candidates: [],
                     reviewNeeded: false,
+                    autoAccepted: false
                 };
             }
 
-            const scored = scoringService.scoreCandidates(title, artist, durationMs, candidates);
+            // 3. Score the candidates safely
+            const scored = scoringService.scoreCandidates(title, artist, durationMs, candidateList);
+
+            // 4. Ensure scoring actually returned results
+            if (!scored || scored.length === 0) {
+                return {
+                    mbid: null,
+                    score: 0,
+                    candidates: [],
+                    reviewNeeded: false,
+                    autoAccepted: false
+                };
+            }
+
             const topMatch = scored[0];
 
+            // 5. Final safety check on topMatch properties
+            const finalScore = topMatch?.score || 0;
+
             return {
-                mbid: topMatch.mbid,
-                score: topMatch.score,
+                mbid: topMatch?.mbid || null,
+                score: finalScore,
                 candidates: scored.slice(0, 5),
-                reviewNeeded: scoringService.requiresReview(topMatch.score),
-                autoAccepted: scoringService.isAutoAcceptable(topMatch.score),
+                reviewNeeded: scoringService.requiresReview(finalScore),
+                autoAccepted: scoringService.isAutoAcceptable(finalScore),
             };
+
         } catch (err) {
-            console.error('MusicBrainz enrichment failed:', err.message);
+            // This catches "Cannot read properties of undefined" and other logic crashes
+            console.error('MusicBrainz enrichment internal crash:', err.message);
             return {
                 mbid: null,
                 score: 0,
                 candidates: [],
-                review_needed: false,
+                reviewNeeded: false,
+                autoAccepted: false
             };
         }
     }
 
     async enrichWithLyrics(title, artist) {
         try {
-            const lyrics = await musixmatchService.searchLyrics(title, artist);
+            const lyrics = await LrclibService.searchLyrics(title, artist);
             return lyrics || null;
         } catch (err) {
             console.warn('Lyrics enrichment failed:', err.message);
@@ -146,55 +185,63 @@ export class DownloadService {
         }
     }
 
-    async waitForFile(dir, beforeSet, timeoutMs = 60000) {
-        const startTime = Date.now();
+    async uploadToSupabase(filePath, fileName) {
+            try {
+                const fileBuffer = fs.readFileSync(filePath);
+                
+                const ext = path.extname(fileName).toLowerCase();
+                const contentType = ext === '.webm' ? 'audio/webm' : 'audio/mp4';
 
-        return new Promise((resolve, reject) => {
-            const checkInterval = setInterval(async () => {
-                try {
-                    const files = await readdirAsync(dir);
-                    const newFiles = files.filter(f => f.endsWith('.mp3') && !beforeSet.has(f));
+                const { data, error } = await supabase.storage
+                    .from('songs')
+                    .upload(`audio/${fileName}`, fileBuffer, {
+                        contentType: contentType,
+                        upsert: true
+                    });
 
-                    if (newFiles.length > 0) {
-                        clearInterval(checkInterval);
-                        resolve(newFiles[0]);
-                    }
+                if (error) throw error;
 
-                    if (Date.now() - startTime > timeoutMs) {
-                        clearInterval(checkInterval);
-                        reject(new Error('File download timeout'));
-                    }
-                } catch (err) {
-                    clearInterval(checkInterval);
-                    reject(err);
-                }
-            }, 1000);
-        });
-    }
+                const { data: publicUrlData } = supabase.storage
+                    .from('songs')
+                    .getPublicUrl(`audio/${fileName}`);
 
-    async downloadSong(youtubeUrl, songTitle) {
+                return publicUrlData.publicUrl;
+            } catch (err) {
+                console.error('Erreur lors de l\'upload sur Supabase:', err.message);
+                throw err;
+            }
+        }
+
+    async downloadSong(youtubeUrl, videoId) {
         try {
             const pythonOrPython3 = process.platform === 'win32' ? 'python' : 'python3';
-
-            const outputTemplate = path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s');
+            
+            const outputTemplate = path.join(DOWNLOAD_DIR, `${videoId}.%(ext)s`);
 
             await execFileAsync(pythonOrPython3, [
                 '-m', 'yt_dlp',
-                '--extract-audio',
-                '--audio-format', 'mp3',
-                '--audio-quality', '192',
+                '-f', 'ba[ext=m4a]/ba[ext=webm]/ba', 
+                '--js-runtimes',
+                'node',
                 '--output', outputTemplate,
                 youtubeUrl,
             ], { timeout: 300000 });
 
-            return true;
+            const files = await readdirAsync(DOWNLOAD_DIR);
+            const downloadedFileName = files.find(f => f.startsWith(videoId));
+
+            if (!downloadedFileName) {
+                return null;
+            }
+
+            return path.join(DOWNLOAD_DIR, downloadedFileName);
         } catch (err) {
             console.error(`Error downloading ${youtubeUrl}:`, err.message);
-            return false;
+            return null;
         }
     }
 
-    async batchDownloadSongs(queries, userId = null) {
+async batchDownloadSongs(queries, userId = null) {
         if (!fs.existsSync(DOWNLOAD_DIR)) {
             fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
         }
@@ -203,112 +250,118 @@ export class DownloadService {
 
         for (const queryText of queries) {
             const queryTrimmed = queryText.trim();
-
-            if (!queryTrimmed) {
-                results.push({
-                    query: queryText,
-                    success: false,
-                    error: 'Empty query',
-                });
-                continue;
-            }
+            if (!queryTrimmed) continue;
 
             try {
                 const videoId = await this.getTopVideoId(queryTrimmed);
-
                 if (!videoId) {
-                    results.push({
-                        query: queryText,
-                        success: false,
-                        error: 'Video not found',
-                    });
+                    results.push({ query: queryText, success: false, error: 'Video not found' });
                     continue;
                 }
-
-                const beforeFiles = new Set(fs.readdirSync(DOWNLOAD_DIR));
 
                 const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                const downloadSuccess = await this.downloadSong(youtubeUrl, queryTrimmed);
+                const localFilePath = await this.downloadSong(youtubeUrl, videoId);
 
-                if (!downloadSuccess) {
-                    results.push({
-                        query: queryText,
-                        success: false,
-                        error: 'Download failed',
-                    });
+                if (!localFilePath) {
+                    results.push({ query: queryText, success: false, error: 'Download failed' });
                     continue;
                 }
 
-                const fileName = await this.waitForFile(DOWNLOAD_DIR, beforeFiles);
-                const filePath = path.join(DOWNLOAD_DIR, fileName);
-                const fileStats = fs.statSync(filePath);
+                const fileName = path.basename(localFilePath);
+                const fileStats = fs.statSync(localFilePath);
+                const supabaseUrl = await this.uploadToSupabase(localFilePath, fileName);
+                fs.unlinkSync(localFilePath); 
 
-                let song = await query(
-                    'SELECT id FROM songs WHERE youtube_id = $1',
-                    [videoId]
-                );
-
-                let enrichmentData = {
-                    mbid: null,
-                    score: 0,
-                    candidates: [],
-                    lyrics: null,
-                    reviewNeeded: false,
+                let song = await query('SELECT id FROM songs WHERE youtube_id = $1', [videoId]);
+                
+                // Initialize enrichment data with YouTube cover as a baseline fallback
+                let enrichmentData = { 
+                    mbid: null, 
+                    album: null, 
+                    year: null, 
+                    genre: null, 
+                    lyrics: null, 
+                    coverUrl: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg` 
                 };
-
+                
                 let title = queryTrimmed;
                 let artist = 'Unknown';
 
-                if (song.rows.length === 0) {
-                    const videoDetails = await this.getVideoDetails(videoId);
+                const videoDetails = await this.getVideoDetails(videoId);
+                if (videoDetails) {
+                    const parsed = this.parseMetadata(videoDetails.title, videoDetails.description);
+                    title = parsed.title;
+                    artist = parsed.artist;
+                    
+                    const cleanTitle = this.cleanSearchTerm(title);
+                    const cleanArtist = this.cleanSearchTerm(artist);
 
-                    if (videoDetails) {
-                        const parsed = this.parseMetadata(videoDetails.title, videoDetails.description);
-                        title = parsed.title;
-                        artist = parsed.artist;
+                    const mbResults = await this.enrichWithMusicBrainz(cleanTitle, cleanArtist, videoDetails.duration);
+                    console.log(`[MusicBrainz] Top candidate for "${cleanTitle}" has score: ${mbResults.score}`);
 
-                        enrichmentData = await this.enrichWithMusicBrainz(
-                            title,
-                            artist,
-                            videoDetails.duration
-                        );
+                    if (mbResults.candidates && mbResults.candidates.length > 0 && mbResults.autoAccepted) {
+                        const topMatch = mbResults.candidates[0];
 
-                        if (enrichmentData.mbid) {
-                            enrichmentData.lyrics = await this.enrichWithLyrics(title, artist);
+                        title = topMatch.title; 
+                        artist = topMatch.artistCredit;
+
+                        enrichmentData.mbid = topMatch.mbid;
+                        enrichmentData.album = topMatch.album;
+                        enrichmentData.year = topMatch.year;
+                        enrichmentData.genre = topMatch.genre; 
+                        
+                        if (topMatch.coverArtUrl || topMatch.coverUrl) {
+                            enrichmentData.coverUrl = topMatch.coverArtUrl || topMatch.coverUrl;
                         }
 
-                        console.log(`📍 Song enrichment: "${title}" by ${artist}, Score: ${enrichmentData.score}, MBID: ${enrichmentData.mbid}`);
+                        enrichmentData.lyrics = await this.enrichWithLyrics(title, artist);
+                    } else{
+                        console.log(`[Enrichment] Skipping MB data for ${title} - Score: ${mbResults.score}`);
                     }
+                }
 
+                if (song.rows.length === 0) {
                     song = await songsService.createSong({
                         youtubeId: videoId,
                         title,
                         artist,
-                        filePath,
-                        mbid: enrichmentData.mbid || null,
+                        duration: videoDetails?.duration,
+                        filePath: supabaseUrl,
+                        mbid: enrichmentData.mbid,
+                        album: enrichmentData.album,
+                        genre: enrichmentData.genre,
+                        year: enrichmentData.year,
+                        coverArtUrl: enrichmentData.coverUrl // Uses prioritized MB cover or YT fallback
                     });
 
                     if (enrichmentData.lyrics && song.id) {
+                        // Using 'lyricsSynced' to match the updated SongsService parameter name
                         await songsService.storeLyrics(
-                            song.id,
-                            enrichmentData.lyrics.lyrics,
-                            enrichmentData.lyrics.source,
+                            song.id, 
+                            enrichmentData.lyrics.plainLyrics, 
+                            enrichmentData.lyrics.syncedLyrics, 
+                            enrichmentData.lyrics.source, 
                             enrichmentData.lyrics.sourceId
-                        ).catch(err => console.warn('Failed to store lyrics:', err.message));
+                        ).catch(err => console.error('Lyric storage error:', err.message));
                     }
                 } else {
                     song = song.rows[0];
                     await query(
-                        'UPDATE songs SET file_path = $1, file_size = $2 WHERE id = $3',
-                        [filePath, fileStats.size, song.id]
+                        `UPDATE songs SET 
+                            file_path = $1, 
+                            file_size = $2, 
+                            album = COALESCE(album, $3), 
+                            genre = COALESCE(genre, $4), 
+                            year = COALESCE(year, $5),
+                            cover_art_url = COALESCE(cover_art_url, $6)
+                            WHERE id = $7`,
+                        [supabaseUrl, fileStats.size, enrichmentData.album, enrichmentData.genre, enrichmentData.year, enrichmentData.coverUrl, song.id] 
                     );
                 }
 
                 if (userId) {
                     await query(
-                        `INSERT INTO user_songs (user_id, song_id, is_downloaded)
-                         VALUES ($1, $2, true)
-                         ON CONFLICT (user_id, song_id) DO NOTHING`,
+                        `INSERT INTO user_songs (user_id, song_id, is_downloaded) VALUES ($1, $2, true) ON CONFLICT (user_id, song_id) DO NOTHING`,
                         [userId, song.id]
                     );
                 }
@@ -316,19 +369,14 @@ export class DownloadService {
                 results.push({
                     query: queryText,
                     songId: song.id,
-                    fileName,
+                    url: supabaseUrl,
                     success: true,
                     enrichment: enrichmentData,
                 });
             } catch (err) {
-                results.push({
-                    query: queryText,
-                    success: false,
-                    error: err.message,
-                });
+                results.push({ query: queryText, success: false, error: err.message });
             }
         }
-
         return results;
     }
 
@@ -374,7 +422,6 @@ export class DownloadService {
 
         const countResult = await query('SELECT COUNT(*) FROM user_songs WHERE user_id = $1', [userId]);
         const total = parseInt(countResult.rows[0].count);
-
         return {
             songs: songsResult.rows,
             total,

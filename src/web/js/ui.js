@@ -3,6 +3,7 @@
 
 import { api } from './api.js';
 import { authManager } from './auth.js';
+import { loadSong } from './player.js';
 
 class UIManager {
     constructor() {
@@ -10,6 +11,14 @@ class UIManager {
         this.currentSong = null;
         this.playlist = [];
         this.setupEventListeners();
+
+        document.addEventListener('error', (e) => {
+            if (e.target.tagName && e.target.tagName.toLowerCase() === 'img') {
+                if (!e.target.src.includes('assets/siacover.jpg')) {
+                    e.target.src = 'assets/siacover.jpg';
+                }
+            }
+        }, true);
     }
 
     setupEventListeners() {
@@ -78,14 +87,17 @@ class UIManager {
 
     async loadTopSongs() {
         try {
-            if (authManager.isAuthenticated) {
-                const response = await api.getTopSongs(8);
-                const container = document.getElementById('topSongs');
-                if (response.data && response.data.length > 0) {
-                    container.innerHTML = response.data.map(song => this.createSongCard(song.song)).join('');
-                } else {
-                    container.innerHTML = '<p>No top songs yet</p>';
-                }
+            if (!authManager.isAuthenticated) return;
+            const response = await api.getTopSongs(8);
+            const container = document.getElementById('topSongs');
+            
+            if (response.data?.length > 0) {
+                container.innerHTML = response.data.map(item => {
+                    const songData = item.song ? item.song : item; 
+                    return this.createSongCard(songData);
+                }).join('');
+            } else {
+                container.innerHTML = '<p>No top songs yet</p>';
             }
         } catch (error) {
             console.error('Error loading top songs:', error);
@@ -106,12 +118,86 @@ class UIManager {
         }
     }
 
+    async showBatchDownloadView() {
+        const mainContainer = document.getElementById('view-container');
+        mainContainer.innerHTML = `
+            <div class="batch-download-container">
+                <div class="batch-download-panel">
+                    <h2>🎵 Batch Download</h2>
+                    <p>Enter song titles/artists (one per line) to download multiple songs</p>
+                    
+                    <form id="batchDownloadForm">
+                        <textarea id="queries" placeholder="Song Name - Artist&#10;Song Name 2 - Artist 2&#10;..."></textarea>
+                        <button type="submit" id="startDownloadBtn" class="btn-primary">Start Download</button>
+                    </form>
+
+                    <div id="results" class="download-results"></div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('batchDownloadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const queries = document.getElementById('queries').value
+                .trim()
+                .split('\n')
+                .map(q => q.trim())
+                .filter(Boolean);
+
+            if (!queries.length) {
+                alert('Please enter at least one song to download');
+                return;
+            }
+
+            document.getElementById('results').innerHTML = '<div class="loading">⏳ Processing...</div>';
+
+            try {
+                const response = await api.batchDownload(queries);
+                this.renderDownloadResults(response.results || response.data?.results || []);
+            } catch (error) {
+                document.getElementById('results').innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        });
+    }
+
+    renderDownloadResults(results) {
+        const resultsDiv = document.getElementById('results');
+        if (!results || results.length === 0) {
+            resultsDiv.innerHTML = '<p>No results</p>';
+            return;
+        }
+
+        resultsDiv.innerHTML = `
+            <div class="results-list">
+                <h3>Download Results</h3>
+                ${results.map(result => `
+                    <div class="result-item ${result.success ? 'success' : 'error'}">
+                        <span class="result-icon">${result.success ? '✅' : '❌'}</span>
+                        <span class="result-query">${result.query || 'Unknown'}</span>
+                        ${result.success ? 
+                            `` :
+                            `<span class="result-error">${result.error}</span>`
+                        }
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    cleanImageUrl(url) {
+        if (!url || url === 'null' || url === 'undefined' || url === '') {
+            return 'assets/siacover.jpg';
+        }
+        return url;
+    }
+
     createSongCard(song) {
+        const safeUrl = this.cleanImageUrl(song?.coverUrl); 
         return `
-            <div class="song-card" data-song-id="${song.id}">
+            <div class="song-card" data-song-id="${song?.id}">
                 <div class="song-cover">
-                    <img src="${song.coverUrl || 'assets/siacover.jpg'}" alt="${song.title}">
-                    <button class="play-btn" data-song-id="${song.id}" title="Play">▶</button>
+                    <img src="${safeUrl}" referrerpolicy="no-referrer" alt="${song?.title || 'Song'}">
+                    <button class="play-btn" data-song-id="${song?.id}" title="Play">▶</button>
                 </div>
                 <div class="song-info">
                     <h4 class="song-title">${song.title}</h4>
@@ -242,10 +328,14 @@ class UIManager {
     }
 
     createPlaylistSongRow(song, index) {
+        const safeUrl = (song?.coverUrl && song.coverUrl !== 'null' && song.coverUrl !== 'undefined') 
+            ? song.coverUrl 
+            : 'assets/siacover.jpg';
+
         return `
             <div class="playlist-song-row" data-song-id="${song.id}">
                 <span class="song-index">${index + 1}</span>
-                <img src="${song.coverUrl || 'assets/siacover.jpg'}" alt="${song.title}" class="song-thumb">
+                <img src="${safeUrl}" alt="${song.title}" class="song-thumb" referrerpolicy="no-referrer">
                 <div class="song-row-info">
                     <h4>${song.title}</h4>
                     <p>${song.artist || 'Unknown Artist'}</p>
@@ -321,28 +411,31 @@ class UIManager {
                 <div class="history-view">
                     <h2>Listening History</h2>
                     <div id="historyList" class="history-list">
-                        ${history.length > 0 ?
-                            history.map((item, idx) => `
-                                <div class="history-item">
-                                    <span class="history-index">${idx + 1}</span>
-                                    <img src="${item.song?.coverUrl || 'assets/siacover.jpg'}" alt="">
-                                    <div class="history-info">
-                                        <h4>${item.song?.title || 'Unknown'}</h4>
-                                        <p>${item.song?.artist || 'Unknown Artist'}</p>
-                                    </div>
-                                    <span class="history-time">${new Date(item.playedAt).toLocaleDateString()}</span>
-                                </div>
-                            `).join('') :
+                        ${history.length > 0 ? 
+                            history.map((item, idx) => {
+                                const safeUrl = (item.song?.coverUrl && item.song.coverUrl !== 'null') 
+                                    ? item.song.coverUrl 
+                                    : 'assets/siacover.jpg';
+
+                                return `
+                                    <div class="history-item">
+                                        <span class="history-index">${idx + 1}</span>
+                                        <img src="${safeUrl}" alt="" referrerpolicy="no-referrer">
+                                        <div class="history-info">
+                                            <h4>${item.song?.title || 'Unknown'}</h4>
+                                            <p>${item.song?.artist || 'Unknown Artist'}</p>
+                                        </div>
+                                        <span class="history-time">${new Date(item.playedAt).toLocaleDateString()}</span>
+                                    </div>`;
+                            }).join('') : 
                             '<p>No history yet</p>'
                         }
                     </div>
-                </div>
-            `;
+                </div>`;
         } catch (error) {
             mainContainer.innerHTML = `<p>Error loading history: ${error.message}</p>`;
         }
     }
-
     attachSongCardListeners() {
         document.querySelectorAll('.play-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -364,15 +457,12 @@ class UIManager {
         try {
             const response = await api.getSongDetails(songId);
             const song = response.data;
-            
-            // Update player with song info
-            document.querySelector('.songName').textContent = song.title || 'Unknown';
-            document.querySelector('.artistName').textContent = song.artist || 'Unknown Artist';
-            document.querySelector('.songCover').src = song.coverUrl || 'assets/siacover.jpg';
 
-            // Log playback
-            if (authManager.isAuthenticated) {
-                api.logPlayback(songId, 0).catch(console.error);
+            await loadSong(song);
+
+            const audio = document.getElementById('audioPlayer');
+            if (audio) {
+                await audio.play().catch(console.error);
             }
 
             this.currentSong = song;

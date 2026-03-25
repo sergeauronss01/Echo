@@ -13,6 +13,7 @@ export class SongsService {
             genre,
             year,
             mbid,
+            coverArtUrl, 
             acoustid,
             acoustidConfidence,
         } = songData;
@@ -27,10 +28,10 @@ export class SongsService {
         }
 
         const result = await query(
-            `INSERT INTO songs (youtube_id, title, artist, duration, file_path, album, genre, year, mbid, acoustid, acoustid_confidence, metadata_verified)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-             RETURNING id, youtube_id, title, artist, duration, file_path, album, genre, year, mbid, acoustid, acoustid_confidence, created_at`,
-            [youtubeId, title, artist, duration, filePath, album, genre, year, mbid || null, acoustid || null, acoustidConfidence || null, !!mbid]
+            `INSERT INTO songs (youtube_id, title, artist, duration, file_path, album, genre, year, mbid, cover_art_url, acoustid, acoustid_confidence, metadata_verified)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             RETURNING *`,
+            [youtubeId, title, artist, duration, filePath, album, genre, year, mbid || null, coverArtUrl || null, acoustid || null, acoustidConfidence || null, !!mbid]
         );
 
         return result.rows[0];
@@ -38,10 +39,10 @@ export class SongsService {
 
     async getSong(songId) {
         const result = await query(
-            `SELECT id, youtube_id, title, artist, duration, album, genre, year, cover_art_url,
-                    mbid, acoustid, acoustid_confidence, lyrics_content, lyrics_source,
-                    metadata_verified, review_status, created_at
-             FROM songs WHERE id = $1`,
+            `SELECT s.*, sl.lyrics_content 
+             FROM songs s
+             LEFT JOIN songs_lyrics sl ON s.id = sl.song_id
+             WHERE s.id = $1`,
             [songId]
         );
 
@@ -50,6 +51,19 @@ export class SongsService {
         }
 
         return result.rows[0];
+    }
+
+    async getSongFilePath(songId) {
+        const result = await query(
+            'SELECT file_path FROM songs WHERE id = $1',
+            [songId]
+        );
+
+        if (result.rows.length === 0 || !result.rows[0].file_path) {
+            throw new AppError('Audio file not found for this song', 404);
+        }
+
+        return result.rows[0].file_path;
     }
 
     async searchSongs(queryText, page = 1, limit = 20) {
@@ -151,14 +165,14 @@ export class SongsService {
         return result.rows[0];
     }
 
-    async storeLyrics(songId, lyricsContent, source, sourceId) {
+    async storeLyrics(songId, lyricsContent, syncedLyrics, source, sourceId) {
         try {
             await query(
-                `INSERT INTO songs_lyrics (song_id, lyrics_content, source, source_id)
-                 VALUES ($1, $2, $3, $4)
+                `INSERT INTO songs_lyrics (song_id, lyrics_content, lyrics_synced, source, source_id)
+                 VALUES ($1, $2, $3, $4, $5)
                  ON CONFLICT (song_id) DO UPDATE SET
-                    lyrics_content = $2, source = $3, source_id = $4, fetched_at = NOW()`,
-                [songId, lyricsContent, source, sourceId]
+                    lyrics_content = $2, lyrics_synced = $3, source = $4, source_id = $5, fetched_at = NOW()`,
+                [songId, lyricsContent, syncedLyrics, source, sourceId]
             );
 
             await query(

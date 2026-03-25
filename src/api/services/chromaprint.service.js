@@ -1,7 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import { AppError } from '../../middleware/error.middleware.js';
+import { AppError } from '../middleware/error.middleware.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -37,7 +36,7 @@ export class ChromaprintService {
             };
         } catch (err) {
             console.error('Chromaprint fingerprinting failed:', err.message);
-            throw new AppError(`Chromaprint fingerprinting failed: ${err.message}`, 500);
+            throw new AppError(`Chromaprint fingerprinting failed: ${err.message}`, 500);   
         }
     }
 

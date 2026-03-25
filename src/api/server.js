@@ -1,6 +1,6 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
@@ -27,13 +27,80 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* --- Security & Middleware --- */
-app.use(helmet());
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+        // 1. Default fallback
+        "default-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+        
+        // 2. API / Database connections
+        "connect-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+        
+        // 3. Audio/Video files
+        "media-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+        
+        // 4. Images (Including YouTube thumbnails)
+        "img-src": [
+            "'self'", 
+            "data:", 
+            "https://outtpsqnptpihgyhznmy.supabase.co", 
+            "https://*.youtube.com", 
+            "https://*.ytimg.com"
+        ],
+        
+        // 5. CSS Styles
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        
+        // 6. Fonts
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
 
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+        // 7. Standard Helmet defaults (Highly recommended to keep)
+        "script-src": ["'self'"], // Add "'unsafe-inline'" here ONLY if your JS requires it
+        "object-src": ["'none'"],
+        "upgrade-insecure-requests": [],
+        },
+        crossOriginEmbedderPolicy: false,
+    })
+);
+
+// Rate limiting (enabled by default, can be disabled via env)
+const isRateLimitDisabled = process.env.DISABLE_RATE_LIMIT === 'true';
+
+const createLimiter = (options) =>
+    isRateLimitDisabled ? (req, res, next) => next() : rateLimit(options);
+
+// General API limiter – generous to allow normal continuous use
+const generalApiLimiter = createLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // 1000 requests per 15 minutes per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        message: 'Too many requests, please slow down and try again later.',
+    },
 });
-app.use(limiter);
+
+// Auth-specific limiter – stricter to protect login/register
+const authLimiter = createLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 auth attempts per 15 minutes per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        message: 'Too many authentication attempts, please try again later.',
+    },
+});
+
+// Heavy operations limiter – for downloads & fingerprinting
+const heavyOpsLimiter = createLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        message: 'Too many heavy operations, please slow down and try again later.',
+    },
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -46,6 +113,14 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, '../web')));
 
 /* --- Mount module routes --- */
+// Apply rate limits only to API routes (not to static assets or the root page)
+if (!isRateLimitDisabled) {
+    app.use('/api', generalApiLimiter);
+    app.use('/api/auth', authLimiter);
+    app.use('/api/download', heavyOpsLimiter);
+    app.use('/api/fingerprinting', heavyOpsLimiter);
+}
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/songs', songsRoutes);
@@ -78,14 +153,6 @@ app.get('/health/dependencies', (req, res) => {
         checks.python = version.trim();
     } catch {
         checks.python = 'missing or not in PATH';
-    }
-
-    try {
-        const ffmpegCmd = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
-        execFileSync(ffmpegCmd, ['-version'], { stdio: 'ignore' });
-        checks.ffmpeg = 'ok';
-    } catch {
-        checks.ffmpeg = 'missing or not in PATH';
     }
 
     res.json({

@@ -11,7 +11,6 @@
     <script src="js/auth.js" type="module" defer></script>
     <script src="js/ui.js" type="module" defer></script>
     <script src="js/player.js" type="module" defer></script>
-    <script src="js/downloader.js" type="module" defer></script>
     <script src="js/modules/fingerprinting.js" type="module" defer></script>
     <script src="js/main.js" type="module" defer></script>
     <title>Echo - Personal Music App</title>
@@ -44,8 +43,8 @@
         <div class="songInfo">
             <img class="songCover" src="assets/siacover.jpg" alt="Cover">
             <div>
-                <h4 class="songName">Snowman</h4>
-                <p class="artistName">Sia</p>
+                <h4 class="songName"></h4>
+                <p class="artistName"></p>
             </div>
         </div>
         <div class="songManips">
@@ -66,5 +65,7 @@
             </div>
         </div>
     </footer>
+
+    <audio id="audioPlayer" crossorigin="anonymous"></audio>
 </body>
 </html>

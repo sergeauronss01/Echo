@@ -238,12 +238,10 @@ function displayMatches(matches) {
         `).join('');
 
         matchesListEl.querySelectorAll('.add-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
+            btn.addEventListener('click', async () => {
                 const songId = btn.dataset.songId;
                 try {
-                    const title = btn.parentElement.querySelector('h4').textContent;
-                    const artist = btn.parentElement.querySelector('p').textContent;
-                    await api.addDownloadedSong(title, artist, '');
+                    await api.addDownloadedSong(Number(songId));
                     btn.textContent = '✓ Added';
                     btn.disabled = true;
                 } catch (error) {

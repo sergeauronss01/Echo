@@ -7,13 +7,8 @@ import { uiManager } from './ui.js';
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
-    // Check authentication status
     await authManager.checkAuthStatus();
-
-    // Setup navigation
     setupNavigation();
-
-    // Show home view by default
     uiManager.showHome();
 });
 
@@ -50,7 +45,7 @@ function setupNavigation() {
 
     if (navDownloadBtn) {
         navDownloadBtn.addEventListener('click', () => {
-            showBatchDownloadView();
+            uiManager.showBatchDownloadView();
         });
     }
 
@@ -71,72 +66,6 @@ function setupNavigation() {
             authManager.showProfileModal(); 
         });
     }
-}
-
-function showBatchDownloadView() {
-    const mainContainer = document.getElementById('view-container');
-    mainContainer.innerHTML = `
-        <div class="batch-download-container">
-            <div class="batch-download-panel">
-                <h2>🎵 Batch Download</h2>
-                <p>Enter song titles/artists (one per line) to download multiple songs</p>
-                
-                <form id="batchDownloadForm">
-                    <textarea id="queries" placeholder="Song Name - Artist&#10;Song Name 2 - Artist 2&#10;..."></textarea>
-                    <button type="submit" id="startDownloadBtn" class="btn-primary">Start Download</button>
-                </form>
-
-                <div id="results" class="download-results"></div>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('batchDownloadForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const queries = document.getElementById('queries').value
-            .trim()
-            .split('\n')
-            .map(q => q.trim())
-            .filter(Boolean);
-
-        if (!queries.length) {
-            alert('Please enter at least one song to download');
-            return;
-        }
-
-        document.getElementById('results').innerHTML = '<div class="loading">⏳ Processing...</div>';
-
-        try {
-            const response = await api.batchDownload(queries);
-            renderDownloadResults(response.results || response.data?.results || []);
-        } catch (error) {
-            document.getElementById('results').innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
-        }
-    });
-}
-
-function renderDownloadResults(results) {
-    const resultsDiv = document.getElementById('results');
-    if (!results || results.length === 0) {
-        resultsDiv.innerHTML = '<p>No results</p>';
-        return;
-    }
-
-    resultsDiv.innerHTML = `
-        <div class="results-list">
-            <h3>Download Results</h3>
-            ${results.map(result => `
-                <div class="result-item ${result.success ? 'success' : 'error'}">
-                    <span class="result-icon">${result.success ? '✅' : '❌'}</span>
-                    <span class="result-query">${result.query || 'Unknown'}</span>
-                    ${result.success ? 
-                        `<span class="result-file">${result.fileName}</span>` :
-                        `<span class="result-error">${result.error}</span>`
-                    }
-                </div>
-            `).join('')}
-        </div>
-    `;
 }
 
 // Setup playlist navigation from sidebar

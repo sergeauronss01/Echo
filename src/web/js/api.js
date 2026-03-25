@@ -102,7 +102,8 @@ class APIService {
     }
 
     async getProfile() {
-        return this.request('/users/profile');
+        const profile = await this.request('/users/profile');
+        return { data: profile };
     }
 
     async updateProfile(username, profilePicture = null) {
@@ -113,23 +114,48 @@ class APIService {
     }
 
     async getUserStats() {
-        return this.request('/users/stats');
+        const stats = await this.request('/users/stats');
+        return { data: stats };
     }
 
     async getPublicProfile(userId) {
-        return this.request(`/users/${userId}`, { authenticated: false });
+        const user = await this.request(`/users/${userId}`, { authenticated: false });
+        return { data: user };
     }
 
     async getAllSongs(limit = 50, offset = 0) {
-        return this.request(`/songs?limit=${limit}&offset=${offset}`, { authenticated: false });
+        const page = Math.floor(offset / limit) + 1;
+        const result = await this.request(`/songs?page=${page}&limit=${limit}`, { authenticated: false });
+        const songs = (result.songs || []).map(song => this.normalizeSong(song));
+        return {
+            data: songs,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                pages: result.pages,
+            },
+        };
     }
 
     async searchSongs(query, limit = 50) {
-        return this.request(`/songs/search?q=${encodeURIComponent(query)}&limit=${limit}`, { authenticated: false });
+        const result = await this.request(
+            `/songs/search?q=${encodeURIComponent(query)}&page=1&limit=${limit}`,
+            { authenticated: false }
+        );
+        const songs = (result.songs || []).map(song => this.normalizeSong(song));
+        return {
+            data: songs,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                pages: result.pages,
+            },
+        };
     }
 
     async getSongDetails(songId) {
-        return this.request(`/songs/${songId}`, { authenticated: false });
+        const song = await this.request(`/songs/${songId}`, { authenticated: false });
+        return { data: this.normalizeSong(song) };
     }
 
     async createSong(songData) {
@@ -195,19 +221,27 @@ class APIService {
         return this.request('/download/batch', {
             method: 'POST',
             body: JSON.stringify({ queries }),
-            authenticated: false,
         });
     }
 
-    async addDownloadedSong(title, artist, url) {
+    async addDownloadedSong(songId) {
         return this.request('/download/add-song', {
             method: 'POST',
-            body: JSON.stringify({ title, artist, url }),
+            body: JSON.stringify({ songId }),
         });
     }
 
     async getUserDownloadedSongs() {
-        return this.request('/download/my-songs');
+        const result = await this.request('/download/my-songs');
+        const songs = (result.songs || []).map(song => this.normalizeSong(song));
+        return {
+            data: songs,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                pages: result.pages,
+            },
+        };
     }
 
     async removeDownloadedSong(songId) {
@@ -219,30 +253,59 @@ class APIService {
     async toggleFavorite(songId) {
         return this.request(`/download/favorite/${songId}`, {
             method: 'PUT',
+            body: JSON.stringify({ isFavorite: true }),
         });
     }
 
-    async logPlayback(songId, duration) {
+    async logPlayback(songId, durationPlayed, totalDuration) {
         return this.request('/history', {
             method: 'POST',
-            body: JSON.stringify({ songId, duration }),
+            body: JSON.stringify({ songId, durationPlayed, totalDuration }),
         });
     }
 
     async getPlaybackHistory(limit = 50) {
-        return this.request(`/history?limit=${limit}`);
+        const result = await this.request(`/history?limit=${limit}`);
+        const historyItems = (result.history || []).map(item => ({
+            ...item,
+            playedAt: item.played_at || item.playedAt,
+            song: {
+                id: item.song_id,
+                title: item.title,
+                artist: item.artist,
+                coverUrl: item.cover_art_url || null,
+            },
+        }));
+        return {
+            data: historyItems,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                pages: result.pages,
+            },
+        };
     }
 
     async getTopSongs(limit = 10) {
-        return this.request(`/history/top-songs?limit=${limit}`);
+        const result = await this.request(`/history/top-songs?limit=${limit}`);
+        const topSongs = (result.topSongs || []).map(row => ({
+            song: this.normalizeSong(row),
+            listenCount: row.listen_count ?? row.listenCount ?? 0,
+        }));
+        return { data: topSongs };
     }
 
     async getRecommendations(limit = 20) {
-        return this.request(`/history/recommendations?limit=${limit}`);
+        const result = await this.request(`/history/recommendations?limit=${limit}`);
+        const recs = (result.recommendations || result.data || []).map(song =>
+            this.normalizeSong(song)
+        );
+        return { data: recs };
     }
 
     async getHistoryStats() {
-        return this.request('/history/stats');
+        const stats = await this.request('/history/stats');
+        return { data: stats };
     }
 
     async fingerprintUpload(audioFile) {
@@ -282,13 +345,27 @@ class APIService {
     }
 
     async getFingerprintHistory() {
-        return this.request('/fingerprinting/history');
+        const result = await this.request('/fingerprinting/history');
+        return { data: result.history || result.data || [] };
     }
 
     async generateFingerprint(songId) {
         return this.request(`/fingerprinting/generate/${songId}`, {
             method: 'POST',
         });
+    }
+
+    normalizeSong(song) {
+        if (!song) return song;
+        const coverUrl = song.cover_art_url || null;
+        const id = song.id;
+        const streamUrl = id ? `${this.baseUrl}/songs/${id}/stream` : null;
+
+        return {
+            ...song,
+            coverUrl,
+            streamUrl,
+        };
     }
 }
 
