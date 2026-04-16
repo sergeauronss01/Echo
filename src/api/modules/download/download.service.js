@@ -80,10 +80,14 @@ export class DownloadService {
 
     cleanSearchTerm(text) {
         return text
-            .replace(/\(official.*\)/gi, '')
-            .replace(/\[official.*\]/gi, '')
-            .replace(/\(lyrics.*\)/gi, '')
-            .replace(/ft\.|feat\./gi, '')
+            // 1. Remove common YT suffixes/prefixes in brackets or parens
+            .replace(/\[(official|music|video|audio|4k|hd|lyrics|explicit|vevo|remastered).*?\]/gi, '')
+            .replace(/\((official|music|video|audio|4k|hd|lyrics|explicit|vevo|remastered).*?\)/gi, '')
+            // 2. Remove "ft." or "feat." and everything following it in that segment 
+            // to get the core song title
+            .replace(/(?:feat|ft)\.?\s+[^\-\(\)\[\]]+/gi, '')
+            // 3. Clean up leftover double spaces or trailing punctuation
+            .replace(/\s+/g, ' ')
             .trim();
     }
 
@@ -296,28 +300,17 @@ async batchDownloadSongs(queries, userId = null) {
                     const cleanTitle = this.cleanSearchTerm(title);
                     const cleanArtist = this.cleanSearchTerm(artist);
 
-                    const mbResults = await this.enrichWithMusicBrainz(cleanTitle, cleanArtist, videoDetails.duration);
-                    console.log(`[MusicBrainz] Top candidate for "${cleanTitle}" has score: ${mbResults.score}`);
-
-                    if (mbResults.candidates && mbResults.candidates.length > 0 && mbResults.autoAccepted) {
-                        const topMatch = mbResults.candidates[0];
-
-                        title = topMatch.title; 
-                        artist = topMatch.artistCredit;
-
-                        enrichmentData.mbid = topMatch.mbid;
-                        enrichmentData.album = topMatch.album;
-                        enrichmentData.year = topMatch.year;
-                        enrichmentData.genre = topMatch.genre; 
-                        
-                        if (topMatch.coverArtUrl || topMatch.coverUrl) {
-                            enrichmentData.coverUrl = topMatch.coverArtUrl || topMatch.coverUrl;
+                    const mbResults = await this.enrichWithMusicBrainz(cleanTitle, "", videoDetails.duration);
+                    
+                    if (mbResults.candidates?.length > 0 && mbResults.autoAccepted) {
+                            const topMatch = mbResults.candidates[0];
+                            title = topMatch.title; 
+                            artist = topMatch.artistCredit;
+                            enrichmentData = { ...enrichmentData, ...topMatch }; // Merges MBID, album, year, etc.
+                        } else{
+                            console.log(`[Enrichment] Skipping MB data for ${title} - Score: ${mbResults.score}`);
                         }
-
                         enrichmentData.lyrics = await this.enrichWithLyrics(title, artist);
-                    } else{
-                        console.log(`[Enrichment] Skipping MB data for ${title} - Score: ${mbResults.score}`);
-                    }
                 }
 
                 if (song.rows.length === 0) {

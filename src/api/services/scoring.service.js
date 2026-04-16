@@ -28,16 +28,20 @@ export class ScoringService {
     scoreTitle(source, candidate) {
         if (!source || !candidate) return 0;
 
-        const s = source.toLowerCase().replace(/\(.*\)|\[.*\]/g, '').trim();
-        const c = candidate.toLowerCase().replace(/\(.*\)|\[.*\]/g, '').trim();
+        // Enhanced cleaning: removing more YouTube-specific clutter
+        const clean = (str) => str.toLowerCase()
+            .replace(/\((?!remix)[^)]*\)/g, '') // Remove parens unless they contain "remix"
+            .replace(/\[[^\]]*\]/g, '')         // Remove all brackets
+            .replace(/\b(official|video|audio|lyrics|4k|hd|vevo)\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        // Perfect match after cleaning
+        const s = clean(source);
+        const c = clean(candidate);
+
         if (s === c) return 1.0;
+        if (c.includes(s) || s.includes(c)) return 0.90; // Increased from 0.85
 
-        // Check for containment (e.g., "Babydoll" inside "Babydoll - Remastered")
-        if (c.includes(s) || s.includes(c)) return 0.85;
-
-        // Fallback to similarity for typos
         const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
     }
@@ -48,94 +52,71 @@ export class ScoringService {
         const s = source.toLowerCase().trim();
         const c = candidate.toLowerCase().trim();
 
-        // 1. Exact match
         if (s === c) return 1.0;
-
-        // 2. Partial match (e.g., "Rose Depp" vs "Lily-Rose Depp")
         if (c.includes(s) || s.includes(c)) return 0.95;
 
-        // 3. Handle multiple artists (e.g., "The Weeknd, Jennie" contains "Jennie")
-        const sParts = s.split(/[,&]|\bfeat\b|\bft\b/).map(p => p.trim());
-        const cParts = c.split(/[,&]|\bfeat\b|\bft\b/).map(p => p.trim());
+        // Handle multiple artists with broader separators
+        const sParts = s.split(/[,&]|\bfeat\b|\bft\b|\band\b/).map(p => p.trim());
+        const cParts = c.split(/[,&]|\bfeat\b|\bft\b|\band\b/).map(p => p.trim());
         
         const hasOverlap = sParts.some(sp => cParts.some(cp => cp.includes(sp) || sp.includes(cp)));
-        if (hasOverlap) return 0.90;
+        if (hasOverlap) return 0.92; // Increased from 0.90
 
-        // 4. Levenshtein fallback for minor typos
         const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
     }
 
     scoreDuration(sourceDuration, candidateDuration) {
-        if (!sourceDuration || !candidateDuration) return 0.5; // Neutral score if missing
+        if (!sourceDuration || !candidateDuration) return 0.7; // Increased from 0.5
 
         const sourceMs = typeof sourceDuration === 'string' ? parseInt(sourceDuration) : sourceDuration;
         const candidateMs = typeof candidateDuration === 'string' ? parseInt(candidateDuration) : candidateDuration;
 
         const diffMs = Math.abs(sourceMs - candidateMs);
         
-        // INCREASE TOLERANCE to 30 seconds
-        const tolerance = 30000; 
-
-        if (diffMs <= tolerance) {
-            // High score for close matches
-            return 1.0 - (diffMs / tolerance) * 0.5;
-        } else if (diffMs <= 60000) {
-            // Still give some points for being within a minute
-            return 0.2;
-        }
-
+        // Much higher tolerance for YouTube intros/outros
+        if (diffMs <= 30000) return 1.0;          // Perfect score up to 30s difference
+        if (diffMs <= 60000) return 0.8;          // High score up to 1 minute
+        if (diffMs <= 120000) return 0.5;         // Half points up to 2 minutes
+        
         return 0;
     }
 
     stringSimilarity(str1, str2) {
         const longer = str1.length > str2.length ? str1 : str2;
         const shorter = str1.length > str2.length ? str2 : str1;
-
         if (longer.length === 0) return 1.0;
-
         const editDistance = this.levenshteinDistance(longer, shorter);
         return (longer.length - editDistance) / longer.length;
     }
 
     levenshteinDistance(str1, str2) {
         const matrix = [];
-
-        for (let i = 0; i <= str2.length; i++) {
-            matrix[i] = [i];
-        }
-
-        for (let j = 0; j <= str1.length; j++) {
-            matrix[0][j] = j;
-        }
-
+        for (let i = 0; i <= str2.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= str1.length; j++) matrix[0][j] = j;
         for (let i = 1; i <= str2.length; i++) {
             for (let j = 1; j <= str1.length; j++) {
                 if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
                     matrix[i][j] = matrix[i - 1][j - 1];
                 } else {
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j - 1] + 1,
-                        matrix[i][j - 1] + 1,
-                        matrix[i - 1][j] + 1
-                    );
+                    matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
                 }
             }
         }
-
         return matrix[str2.length][str1.length];
     }
 
+    // Loosened thresholds to accept more results automatically
     isAutoAcceptable(score) {
-        return score >= 80;
+        return score >= 70; // Lowered from 80
     }
 
     requiresReview(score) {
-        return score < 80 && score >= 60;
+        return score < 70 && score >= 45; // Lowered range from 60-80
     }
 
     isRejectable(score) {
-        return score < 60;
+        return score < 45; // Lowered from 60
     }
 }
 
