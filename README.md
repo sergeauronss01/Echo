@@ -71,15 +71,15 @@ Browser (Vanilla JS SPA)
 │  └─ /fingerprinting  Identify audio       │
 │                                           │
 │  Services (shared logic)                  │
-│  ├─ MusicBrainzService                   │
-│  ├─ ScoringService                       │
-│  ├─ AcoustIDService                      │
-│  ├─ ChromaprintService  (wraps fpcalc)   │
-│  └─ LrclibService                        │
+│  ├─ MusicBrainzService                    │
+│  ├─ ScoringService                        │ 
+│  ├─ AcoustIDService                       │
+│  ├─ ChromaprintService  (wraps fpcalc)    │
+│  └─ LrclibService                         │
 │                                           │
 │  Python subprocess                        │
-│  └─ yt-dlp  (download)                   │
-│  └─ essentia_fingerprint.py  (fallback)  │
+│  └─ yt-dlp  (download)                    │
+│  └─ essentia_fingerprint.py  (fallback)   │
 └───────────────────────────────────────────┘
         │                      │
         ▼                      ▼
