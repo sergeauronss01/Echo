@@ -41,6 +41,10 @@ export const songValidations = {
         album: Joi.string().max(512),
         genre: Joi.string().max(255),
         year: Joi.number().integer().min(1900).max(2100),
+        mbid: Joi. string(),
+        coverArtUrl: Joi.string() , 
+        acoustid: Joi.string() ,
+        acoustidConfidence: Joi.number() ,
     }),
 
     search: Joi.object({

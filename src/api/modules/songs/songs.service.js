@@ -32,7 +32,7 @@ export class SongsService {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              RETURNING *`,
             [youtubeId, title, artist, duration, filePath, album, genre, year, mbid || null, coverArtUrl || null, acoustid || null, acoustidConfidence || null, !!mbid]
-        );
+        ); 
 
         return result.rows[0];
     }
@@ -168,10 +168,10 @@ export class SongsService {
     async storeLyrics(songId, lyricsContent, syncedLyrics, source, sourceId) {
         try {
             await query(
-                `INSERT INTO songs_lyrics (song_id, lyrics_content, lyrics_synced, source, source_id)
+                `INSERT INTO songs_lyrics (song_id, lyrics_content, synced, source, source_id)
                  VALUES ($1, $2, $3, $4, $5)
                  ON CONFLICT (song_id) DO UPDATE SET
-                    lyrics_content = $2, lyrics_synced = $3, source = $4, source_id = $5, fetched_at = NOW()`,
+                    lyrics_content = $2, synced = $3, source = $4, source_id = $5, fetched_at = NOW()`,
                 [songId, lyricsContent, syncedLyrics, source, sourceId]
             );
 

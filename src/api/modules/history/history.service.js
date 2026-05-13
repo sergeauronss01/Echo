@@ -64,12 +64,12 @@ export class HistoryService {
     }
 
     async getTopSongs(userId, period = 'month', limit = 10) {
-        let dateFilter = 'CURRENT_DATE - INTERVAL \'30 days\'';
+        let dateFilter = "CURRENT_DATE - INTERVAL '30 days'";
 
         if (period === 'week') {
-            dateFilter = 'CURRENT_DATE - INTERVAL \'7 days\'';
+            dateFilter = "CURRENT_DATE - INTERVAL '7 days'";
         } else if (period === 'year') {
-            dateFilter = 'CURRENT_DATE - INTERVAL \'365 days\'';
+            dateFilter = "CURRENT_DATE - INTERVAL '365 days'";
         }
 
         const result = await query(

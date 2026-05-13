@@ -43,6 +43,9 @@ export class EnvironmentValidator {
             'GOOGLE_CLIENT_ID',
             'GOOGLE_CLIENT_SECRET',
             'YT_API_KEY',
+            'SUPABASE_URL',
+            'SUPABASE_SERVICE_ROLE_KEY',
+            'ACOUSTID_CLIENT_ID'
         ];
 
         const hasModernDB = !!process.env.DATABASE_URL;

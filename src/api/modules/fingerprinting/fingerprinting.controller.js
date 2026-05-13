@@ -5,11 +5,11 @@ export class FingerprintingController {
     async uploadAndIdentify(req, res, next) {
         try {
             if (!req.file) {
-                throw new AppError('No file uploaded', 400);
+                throw new AppError('No audio file received. Send multipart/form-data with field "audio".', 400);
             }
 
             const result = await fingerprintingService.uploadAndIdentify(req.file.path, req.userId);
-            res.json(result);
+            res.json({ data: result });
         } catch (err) {
             next(err);
         }
@@ -17,15 +17,12 @@ export class FingerprintingController {
 
     async recordAndIdentify(req, res, next) {
         try {
-            const { audioBlob } = req.body;
-
-            if (!audioBlob) {
-                throw new AppError('No audio data provided', 400);
+            if (!req.file) {
+                throw new AppError('No audio recording received. Send multipart/form-data with field "audio".', 400);
             }
 
-            const audioBuffer = Buffer.from(audioBlob, 'base64');
-            const result = await fingerprintingService.identifyFromRecording(audioBuffer, req.userId);
-            res.json(result);
+            const result = await fingerprintingService.identifyFromRecording(req.file.path, req.userId);
+            res.json({ data: result });
         } catch (err) {
             next(err);
         }

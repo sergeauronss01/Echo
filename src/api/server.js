@@ -139,28 +139,25 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/health/dependencies', (req, res) => {
-    const { execFileSync } = require('child_process');
-    const checks = {
-        node: 'ok',
-        python: 'ok',
-        ffmpeg: 'ok',
-        database: 'ok'
-    };
+    const checks = { node: process.version, python: 'unknown', ffmpeg: 'unknown' };
 
     try {
         const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-        const version = execFileSync(pythonCmd, ['--version'], { encoding: 'utf8' });
-        checks.python = version.trim();
+        checks.python = execFileSync(pythonCmd, ['--version'], { encoding: 'utf8' }).trim();
     } catch {
         checks.python = 'missing or not in PATH';
     }
 
-    res.json({
-        status: 'ok',
-        checks,
-        timestamp: new Date().toISOString(),
-    });
+    try {
+        checks.ffmpeg = execFileSync('ffmpeg', ['-version'], { encoding: 'utf8' })
+            .split('\n')[0].trim();
+    } catch {
+        checks.ffmpeg = 'missing or not in PATH';
+    }
+
+    res.json({ status: 'ok', checks, timestamp: new Date().toISOString() });
 });
+
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../web/index.html'));

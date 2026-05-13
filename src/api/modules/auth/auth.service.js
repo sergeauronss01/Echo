@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { query } from '../../config/database.js';
-import { generateToken, generateRefreshToken } from '../../utils/jwt.utils.js';
+import { verifyRefreshToken, generateToken, generateRefreshToken } from '../../utils/jwt.utils.js';
 import { AppError } from '../../middleware/error.middleware.js';
 
 export class AuthService {
@@ -70,7 +70,6 @@ export class AuthService {
     async refreshAccessToken(refreshToken) {
         let decoded;
         try {
-            const { verifyRefreshToken } = await import('../utils/jwt.utils.js');
             decoded = verifyRefreshToken(refreshToken);
         } catch (err) {
             throw new AppError('Invalid refresh token', 401);

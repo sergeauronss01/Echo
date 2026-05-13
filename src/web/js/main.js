@@ -1,151 +1,113 @@
-// --- Main Application Initialization ---
-// Bootstraps the application and sets up all modules
-
-import { api } from './api.js';
+import { api }         from './api.js';
 import { authManager } from './auth.js';
-import { uiManager } from './ui.js';
+import { uiManager }   from './ui.js';
 
-// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
     await authManager.checkAuthStatus();
+
     setupNavigation();
     uiManager.showHome();
+
+    await setupPlaylistSidebar();
 });
 
 function setupNavigation() {
-    const homeBtn = document.getElementById('homeBtn');
-    const navLibraryBtn = document.getElementById('navLibraryBtn');
-    const navHistoryBtn = document.getElementById('navHistoryBtn');
-    const navDownloadBtn = document.getElementById('navDownloadBtn');
+    const homeBtn           = document.getElementById('homeBtn');
+    const navLibraryBtn     = document.getElementById('navLibraryBtn');
+    const navHistoryBtn     = document.getElementById('navHistoryBtn');
+    const navDownloadBtn    = document.getElementById('navDownloadBtn');
     const navFingerprintBtn = document.getElementById('navFingerprintBtn');
-    const logInBtn = document.getElementById('logInBtn');
-    const accountBtn = document.getElementById('account');
+    const logInBtn          = document.getElementById('logInBtn');
+    const accountBtn        = document.getElementById('account');
 
-    if (homeBtn) {
-        homeBtn.addEventListener('click', () => {
-            uiManager.showHome();
-        });
-    }
+    homeBtn?.addEventListener('click',        () => uiManager.showHome());
+    navLibraryBtn?.addEventListener('click',  () => uiManager.showLibraryView());
+    navDownloadBtn?.addEventListener('click', () => uiManager.showBatchDownloadView());
 
-    if (navLibraryBtn) {
-        navLibraryBtn.addEventListener('click', () => {
-            uiManager.showLibraryView();
-        });
-    }
-
-    if (navHistoryBtn) {
-        navHistoryBtn.addEventListener('click', () => {
-            if (!authManager.isAuthenticated) {
-                authManager.showAuthModal();
-            } else {
-                uiManager.showHistoryView();
-            }
-        });
-    }
-
-    if (navDownloadBtn) {
-        navDownloadBtn.addEventListener('click', () => {
-            uiManager.showBatchDownloadView();
-        });
-    }
-
-    if (navFingerprintBtn) {
-        navFingerprintBtn.addEventListener('click', () => {
-            // This is handled by fingerprinting.js
-        });
-    }
-
-    if (logInBtn) {
-        logInBtn.addEventListener('click', () => {
+    navHistoryBtn?.addEventListener('click', () => {
+        if (!authManager.isAuthenticated) {
             authManager.showAuthModal();
-        });
-    }
+        } else {
+            uiManager.showHistoryView();
+        }
+    });
 
-    if (accountBtn) {
-        accountBtn.addEventListener('click', () => {
-            authManager.showProfileModal(); 
-        });
-    }
+    navFingerprintBtn?.addEventListener('click', () => {
+        // Fingerprinting view is handled by fingerprinting.js which listens
+        // on the same button. This stub is kept for explicit documentation.
+    });
+
+    logInBtn?.addEventListener('click',  () => authManager.showAuthModal());
+    accountBtn?.addEventListener('click', () => authManager.showProfileModal());
+
+    const searchForm = document.getElementById('searchForm');
+    searchForm?.addEventListener('submit', (e) => uiManager.handleSearch(e));
 }
-
-// Setup playlist navigation from sidebar
-window.addEventListener('load', () => {
-    setupPlaylistSidebar();
-});
 
 async function setupPlaylistSidebar() {
     if (!authManager.isAuthenticated) return;
 
     const playlistBar = document.getElementById('playlistBar');
-    
+    if (!playlistBar) return;
+
     try {
-        const response = await api.getUserPlaylists();
-        const playlists = response.data || [];
+        const response  = await api.getUserPlaylists();
+        const playlists = response.data || response.playlists || [];
 
-        if (playlists && playlists.length > 0) {
-            playlistBar.innerHTML = `
-                <div class="playlists-menu">
-                    <h4>Playlists</h4>
-                    <div class="playlists-list">
-                        ${playlists.map(p => `
-                            <button class="playlist-item" data-playlist-id="${p.id}">
-                                ${p.name}
-                            </button>
-                        `).join('')}
-                    </div>
+        if (!playlists.length) return;
+
+        playlistBar.innerHTML = `
+            <div class="playlists-menu">
+                <h4>Playlists</h4>
+                <div class="playlists-list">
+                    ${playlists.map(p => `
+                        <button class="playlist-item" data-playlist-id="${p.id}">
+                            ${p.name}
+                        </button>
+                    `).join('')}
                 </div>
-            `;
+            </div>
+        `;
 
-            // Add click handlers
-            document.querySelectorAll('.playlist-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const playlistId = item.dataset.playlistId;
-                    uiManager.showPlaylistView(playlistId);
-                });
+        playlistBar.querySelectorAll('.playlist-item').forEach(item => {
+            item.addEventListener('click', () => {
+                uiManager.showPlaylistView(item.dataset.playlistId);
             });
-        }
-    } catch (error) {
-        console.error('Error loading playlists sidebar:', error);
+        });
+    } catch (err) {
+        console.error('Error loading playlists sidebar:', err);
     }
 }
 
-// Setup song card listeners globally
 window.addEventListener('click', (e) => {
-    if (e.target.closest('.play-btn')) {
-        const btn = e.target.closest('.play-btn');
-        const songId = btn.dataset.songId;
-        uiManager.playSong(songId);
+    const playBtn = e.target.closest('.play-btn');
+    if (playBtn) {
+        uiManager.playSong(playBtn.dataset.songId);
+        return;
     }
 
-    if (e.target.closest('.song-card')) {
-        const card = e.target.closest('.song-card');
-        if (!e.target.closest('.play-btn')) {
-            const songId = card.dataset.songId;
-            uiManager.playSong(songId);
-        }
+    const songCard = e.target.closest('.song-card');
+    if (songCard && !e.target.closest('.play-btn')) {
+        uiManager.playSong(songCard.dataset.songId);
+        return;
     }
 
-    if (e.target.closest('.playlist-card')) {
-        const card = e.target.closest('.playlist-card');
-        if (!e.target.closest('.play-btn-playlist')) {
-            const playlistId = card.dataset.playlistId;
-            uiManager.showPlaylistView(playlistId);
-        }
+    const playlistCard = e.target.closest('.playlist-card');
+    if (playlistCard && !e.target.closest('.play-btn-playlist')) {
+        uiManager.showPlaylistView(playlistCard.dataset.playlistId);
     }
 });
 
-function handleOAuthRedirect() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const refreshToken = urlParams.get('refreshToken');
+(function handleOAuthRedirect() {
+    const params       = new URLSearchParams(window.location.search);
+    const token        = params.get('token');
+    const refreshToken = params.get('refreshToken');
 
     if (token) {
         api.setToken(token);
-        localStorage.setItem('refreshToken', refreshToken); 
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
-}
-handleOAuthRedirect();
+})();
 
 export { uiManager, authManager, api };

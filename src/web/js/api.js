@@ -357,15 +357,14 @@ class APIService {
 
     normalizeSong(song) {
         if (!song) return song;
-        const coverUrl = song.cover_art_url || null;
-        const id = song.id;
-        const streamUrl = id ? `${this.baseUrl}/songs/${id}/stream` : null;
 
-        return {
-            ...song,
-            coverUrl,
-            streamUrl,
-        };
+        const coverUrl = song.cover_art_url || null;
+
+        const streamUrl = song.youtube_id
+            ? `${SUPABASE_URL}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a`
+            : null;
+
+        return { ...song, coverUrl, streamUrl };
     }
 }
 

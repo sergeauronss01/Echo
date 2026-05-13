@@ -18,25 +18,34 @@
 <body>
     <span id="logo">Echo</span>
     <header>
-        <button id="homeBtn" title="Home"><img src="assets/home_icon.svg" alt="home"></button>
+        <button id="homeBtn" title="Home">
+            <img src="assets/home_icon.svg" alt="home">
+        </button>
+
         <form id="searchForm">
-            <input type="text" placeholder="What song would you like to listen to?" id="searchBar">
-            <button type="submit" id="searchBtn"><img src="assets/search_icon.svg" alt="search button"></button>
+            <input type="text"
+                   placeholder="What song would you like to listen to?"
+                   id="searchBar">
+            <button type="submit" id="searchBtn">
+                <img src="assets/search_icon.svg" alt="search">
+            </button>
         </form>
-        <button id="navLibraryBtn" title="My Library">🎵 Library</button>
-        <button id="navHistoryBtn" title="Listening History">📊 History</button>
-        <button id="navDownloadBtn" title="Batch Download">⬇️ Download</button>
+
+        <button id="navLibraryBtn"     title="My Library">🎵 Library</button>
+        <button id="navHistoryBtn"     title="Listening History">📊 History</button>
+        <button id="navDownloadBtn"    title="Batch Download">⬇️ Download</button>
         <button id="navFingerprintBtn" title="Identify Song">🎧 Identify</button>
-        <button id="logInBtn" class="btn-primary">Log in</button>
-        <button id="account" class="account-btn" title="Account"><img src="assets/siacover.jpg" alt=""></button>
+
+        <button id="logInBtn"  class="btn-primary">Log in</button>
+        <button id="account"   class="account-btn" title="Account">
+            <img src="assets/siacover.jpg" alt="account">
+        </button>
     </header>
 
-    <aside id="playlistBar">
-    </aside>
+    <aside id="playlistBar"></aside>
 
     <main id="main">
-        <div id="view-container">
-        </div>
+        <div id="view-container"></div>
     </main>
 
     <footer id="nowPlayingBar">
@@ -44,16 +53,27 @@
             <img class="songCover" src="assets/siacover.jpg" alt="Cover">
             <div>
                 <h4 class="songName"></h4>
-                <p class="artistName"></p>
+                <p  class="artistName"></p>
             </div>
         </div>
+
         <div class="songManips">
             <div class="manipBtns">
-                <button id="shuffleBtn"><img src="assets/shuffle.svg" alt="shuffle button"></button>
-                <button id="previousBtn"><img src="assets/previous.svg" alt="previous song"></button>
-                <button id="pausePlayBtn"><img src="assets/play.svg" alt="play button"></button>
-                <button id="nextBtn"><img src="assets/next.svg" alt="next song"></button>
-                <button id="repeatBtn"><img src="assets/repeat.svg" alt="repeat button"></button>
+                <button id="shuffleBtn">
+                    <img src="assets/shuffle.svg" alt="shuffle">
+                </button>
+                <button id="previousBtn">
+                    <img src="assets/previous.svg" alt="previous">
+                </button>
+                <button id="pausePlayBtn">
+                    <img src="assets/play.svg" alt="play">
+                </button>
+                <button id="nextBtn">
+                    <img src="assets/next.svg" alt="next">
+                </button>
+                <button id="repeatBtn">
+                    <img src="assets/repeat.svg" alt="repeat">
+                </button>
             </div>
             <div class="player-timeline">
                 <span class="time current">--:--</span>

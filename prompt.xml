@@ -1,0 +1,60 @@
+<role>
+You are a Senior Software Engineer with a lot of experience implementing app from end-to-end and deep understanding of each step of the process.
+</role>
+<context>
+I am building a web application named Echo which a song player/manager that implements or is yet to implement the following features: song downloading and batch-downloading, playlist creation, song identification through audio(Shazam-like), synced lyrics view. I started this project in 11/2025 and we are in 05/2026. Provided the duration of the project, there has been ideas picked up the left in the end for new ones better for my situation. There may be some amount of unused code here and there and, for sure, a lot of malfunctioning code everywhere.
+</context>
+<task>
+Your task here is spread over multiple stages:
+1. Analyze the whole codebase and depicts what each file is for, each class and function of these files are for and what each line of the classes and functions is for. Where they belong in the project as a whole, How they interact with others parts of the projects and what do they add to the final output.
+2. Group together the parts that contributes to a slice of the project (auth, downloading, etc) and identify snippets that do the same things, parts that are not well connected between each other, parts that don't do as expected what they are built for. For each issue retrieved in this process, apply the appropriate fix. And make sure every single part the project works perfectly by itself and the project too as a whole following the changes proposed and made.
+3. Do a list, whatever its length, of the possible issue that I might encounter while testing the application and how to test each one of these. Use your experience and creativity on this  one.
+4.Generate a README.MD that goes in details about the project. Its architecture, how the connection where make in code and and out of it (database, GCP and the external tools). An expert level explaination of what this project enveloppes
+</task>
+<constraint>
+These constraints are to be respected whatever the situation:
+- Do not jump anything while reviewing of while writing, it will take the time it is gonna take 
+- For the 2. of the tasks, make decisions about external tools used based on the fact that I am a student building this project on its own and not to commercialize it. What I want are free and useful tools to use. I don't want it to be a headache.
+- No radical change in the codebase unless authorization given
+</constraint>
+<message>
+You might not be able to finish what's asked in the prompt in one go. If I write "Continue" and this prompt is in your context window know that you should build upon what you have already and finish entirely what is asked in this prompt. We might talk in between it. Just remember that "Continue" means building upon what we have already done.
+</message>
+
+<!--First errors found in code left to be addressed-->
+<backend>
+auth.middleware.js — Three exports: authenticate (requires valid JWT, sets req.userId and req.user), requireAdmin (checks req.user.role === 'admin'), optional (attaches user if token present, otherwise continues). All correct. Note: requireAdmin is used in fingerprinting routes but there is no role column in the users table schema, so it will always deny admin actions.
+
+validation.middleware.js — validate(schema, property) runs a Joi schema against req[property]. asyncHandler(fn) wraps async route handlers — though it is imported nowhere; all routes use inline arrow functions that don't auto-catch, relying instead on next(err) in try/catch blocks.
+
+002_add_musicbrainz_support.sql — Adds the missing columns to songs, creates fingerprint_matches, song_metadata_reviews, songs_lyrics. Uses IF NOT EXISTS / IF NOT EXISTS guards so it is re-runnable. However, runMigrations.js runs every SQL file on every boot with no tracking table — so migration 001 will re-run CREATE TABLE IF NOT EXISTS (harmless) but migration 002 will re-run ALTER TABLE ADD COLUMN IF NOT EXISTS (also harmless on Postgres 9.6+). Not ideal but functional.
+
+auth.controller.js — Handles all auth routes. Creates its own oauth2Client with GOOGLE_CALLBACK_URL from env. getGoogleAuthUrl calls res.redirect(authUrl) — but in api.js on the frontend, getGoogleAuthUrl() calls window.location.href = '/api/auth/google/url' which hits this redirect correctly. The googleCallback handler fetches user info and delegates to AuthService.handleGoogleCallback. On success, redirects to FRONTEND_URL?token=...&refreshToken=....
+
+songs.controller.js — create, get, search, getAll, stream. The stream handler reads from a local file_path — but after the Supabase upload in download.service.js, file_path is set to a Supabase URL (a remote URL, not a local path). fs.statSync on a URL will throw. Streaming needs to redirect to or proxy from Supabase.
+
+Bug: In batchDownloadSongs, when the song already exists (song.rows.length > 0), the code does song = song.rows[0] and then later accesses song.id — correct. But when creating a new song, songsService.createSong() returns result.rows[0] which is the raw DB row (field: id). Then the code does song.id — also correct. However, lyrics storage uses song.id which only exists if createSong returned a row object. Fine.
+
+Bug: uploadAndIdentify is called by the controller but doesn't exist in the service — only identifyFromRecording exists. The controller calls fingerprintingService.uploadAndIdentify(req.file.path, req.userId) but the service has no such method. Upload-based identification is broken.
+
+Bug: The controller's recordAndIdentify expects req.body.audioBlob (base64) but the frontend (api.js) sends a FormData with audio field as a blob. These don't match — the recording path is broken end-to-end.
+
+musicbrainz.service.js — Rate-limited (1 req/sec) MusicBrainz API client. searchByTitleArtistDuration searches by title and artist, enriches recordings with cover art URL from Cover Art Archive, album, year, genre. The enrichRecordings method constructs a Cover Art Archive URL — these sometimes return 404 for releases without art, which needs handling on the frontend (already done with fallback image).
+
+runMigrations.js — Reads src/api/migrations/ directory, sorts files, runs each SQL file. No migration tracking — runs all files every boot. Safe only because all statements use IF NOT EXISTS.
+</backend>
+
+
+<frontend>
+js/api.js — APIService class. All backend communication. request() handles 401 by attempting token refresh then retry. normalizeSong() maps cover_art_url → coverUrl and builds a streamUrl. The streamUrl points to /api/songs/:id/stream — which, as noted, is broken server-side because file_path is a Supabase URL. The frontend should directly use the Supabase URL. getGoogleAuthUrl() redirects the whole window, not returning a URL — the googleAuthBtn click handler in auth.js tries to use the return value as { url: ... } which will be undefined.
+
+js/auth.js — AuthManager class. Login, register, Google OAuth, profile modal. showAuthModal() renders the auth form into #view-container. The Google auth button handler calls api.getGoogleAuthUrl() and then window.location.href = authUrl.url — but getGoogleAuthUrl() does window.location.href = '/api/auth/google/url' directly and returns undefined. Double redirect attempt — the first one (window.location.href in api.js) will trigger navigation before the .then() in auth.js runs. Actually, getGoogleAuthUrl() in api.js is synchronous (window.location.href = ...) so it immediately navigates away. The auth.js handler's await gets undefined back. This means Google OAuth navigation works (via api.js's direct assignment) but the error handler in auth.js also tries to use authUrl.url — which is fine since navigation already happened.
+
+js/ui.js — UIManager class. All view rendering: home, search, batch download, playlist, library, history. Song card creation uses song?.coverUrl which is populated by normalizeSong. playSong(songId) fetches song details then calls loadSong from player.js. attachSongCardListeners() is defined but only called in showLibraryView() — home and search views don't call it, so their play buttons don't work from this method. However, main.js has a global click delegator that handles .play-btn clicks — so playback works via event delegation.
+
+js/player.js — loadSong(song) builds a Supabase URL directly: `${supabaseUrl}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a` — this bypasses the broken /api/songs/:id/stream route entirely and streams directly from Supabase. Smart workaround. Animation loop uses requestAnimationFrame for smooth timeline updates.
+
+js/main.js — Bootstrap + global event delegation for song card clicks, playlist card clicks, OAuth redirect handling. setupPlaylistSidebar() runs on load event but authManager.isAuthenticated may not yet be true since checkAuthStatus() is async and window.load fires before it resolves. Sidebar won't populate on first load for authenticated users.
+
+js/modules/fingerprinting.js — Frontend fingerprinting UI. Upload via FormData with field audio. Record via MediaRecorder → Blob → api.fingerprintRecord(audioBlob). api.fingerprintRecord sends FormData with field audio as well. But the controller expects req.body.audioBlob (JSON base64). Mismatch confirmed.
+</frontend>
