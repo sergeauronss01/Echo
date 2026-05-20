@@ -102,7 +102,7 @@ export class SongsService {
             `SELECT id, youtube_id, title, artist, duration, album, genre, year, cover_art_url,
                     mbid, acoustid, metadata_verified, created_at
              FROM songs
-             ORDER BY metadata_verified DESC, created_at DESC
+             ORDER BY created_at DESC
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );

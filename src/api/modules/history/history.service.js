@@ -73,7 +73,7 @@ export class HistoryService {
         }
 
         const result = await query(
-            `SELECT s.id, s.title, s.artist, s.duration, COUNT(lh.id) as listen_count
+            `SELECT s.id, s.title, s.artist, s.cover_art_url, s.duration, COUNT(lh.id) as listen_count
              FROM listening_history lh
              JOIN songs s ON lh.song_id = s.id
              WHERE lh.user_id = $1 AND lh.played_at >= ${dateFilter}

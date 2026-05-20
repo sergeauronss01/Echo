@@ -409,7 +409,7 @@ class UIManager {
     // ── Card templates ──────────────────────────────────────────
 
     createSongCard(song) {
-        const safeUrl = this._cleanImageUrl(song?.coverUrl || song?.cover_art_url);
+        const safeUrl = this._cleanImageUrl(song?.cover_art_url);
         return `
             <div class="song-card" data-song-id="${song?.id}">
                 <div class="song-cover">

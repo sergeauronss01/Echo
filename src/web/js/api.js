@@ -5,6 +5,18 @@ class APIService {
     constructor() {
         this.baseUrl = '/api';
         this.token = localStorage.getItem('token');
+        this.supabaseUrl = null;
+        this._configPromise = this._loadConfig();
+    }
+
+    async _loadConfig() {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        this.supabaseUrl = config.supabaseUrl;
+    }
+
+    async ready() {
+        await this._configPromise;
     }
 
     getHeaders(includeAuth = true) {
@@ -360,8 +372,8 @@ class APIService {
 
         const coverUrl = song.cover_art_url || null;
 
-        const streamUrl = song.youtube_id
-            ? `${SUPABASE_URL}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a`
+        const streamUrl = song.youtube_id && this.supabaseUrl
+            ? `${this.supabaseUrl}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a`
             : null;
 
         return { ...song, coverUrl, streamUrl };

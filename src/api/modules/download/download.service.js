@@ -71,8 +71,8 @@ export class DownloadService {
 
     cleanSearchTerm(text) {
         return text
-            .replace(/\[(official|music|video|audio|4k|hd|lyrics|explicit|vevo|remastered).*?\]/gi, '')
-            .replace(/\((official|music|video|audio|4k|hd|lyrics|explicit|vevo|remastered).*?\)/gi, '')
+            .replace(/\[[^\]]*\]/g, '')   
+            .replace(/\([^\)]*\)/g, '')
             .replace(/(?:feat|ft)\.?\s+[^\-\(\)\[\]]+/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -82,6 +82,7 @@ export class DownloadService {
         const patterns = [
             /^(.*?)\s*[-–]\s*(.*?)(?:\s*\(|$)/,
             /^(.*?)\s*[-–]\s*/,
+            /^(.*?)\s*[-–]\s*(.*?)(?:\s*[\(\[]|$)/,
         ];
         let artist = 'Unknown';
         let parsedTitle = title;
@@ -226,12 +227,12 @@ export class DownloadService {
                 const videoDetails = await this.getVideoDetails(videoId);
                 if (videoDetails) {
                     const parsed = this.parseMetadata(videoDetails.title);
-                    title  = parsed.title;
-                    artist = parsed.artist;
+                    title  = this.cleanSearchTerm(parsed.title);
+                    artist = this.cleanSearchTerm(parsed.artist);
 
                     const mbResults = await this.enrichWithMusicBrainz(
-                        this.cleanSearchTerm(title),
-                        this.cleanSearchTerm(artist),
+                        title,
+                        artist,
                         videoDetails.duration
                     );
 
