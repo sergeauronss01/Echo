@@ -162,7 +162,7 @@ export class DownloadService {
         }
 
         try {
-            const python   = process.platform === 'win32' ? 'python' : 'python3';
+            const python = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
             const template = path.join(DOWNLOAD_DIR, `${videoId}.%(ext)s`);
 
             await execFileAsync(python, [

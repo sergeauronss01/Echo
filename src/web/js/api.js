@@ -193,7 +193,7 @@ class APIService {
     }
 
     async getPlaylistDetails(playlistId) {
-        return this.request(`/playlists/${playlistId}`, { authenticated: false });
+        return this.request(`/playlists/${playlistId}`);
     }
 
     async updatePlaylist(playlistId, name, description, isPublic) {

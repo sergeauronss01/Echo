@@ -40,8 +40,9 @@ export class FingerprintingService {
 
     async generateEssentiaFingerprint(filePath) {
         try {
-            const pythonScript = path.join(__dirname, 'essentia_fingerprint.py');
-            const pythonOrPython3 = process.platform === 'win32' ? 'python' : 'python3';
+        const pythonScript = path.join(__dirname, 'essentia_fingerprint.py');
+        
+        const pythonOrPython3 = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
 
             const { stdout } = await execFileAsync(
                 pythonOrPython3,
@@ -73,12 +74,6 @@ export class FingerprintingService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // FIX D1: uploadAndIdentify was called by the controller but
-    // did not exist in the service. Added here.
-    // Accepts a local file path (set by multer on req.file.path).
-    // ─────────────────────────────────────────────────────────────
-
     async uploadAndIdentify(filePath, userId) {
         try {
             const fingerprint = await this.generateFingerprint(filePath);
@@ -87,7 +82,6 @@ export class FingerprintingService {
                 fingerprint.duration
             );
 
-            // Persist match record
             const matched = identificationResult.mbids?.[0] || null;
             await query(
                 `INSERT INTO fingerprint_matches
@@ -98,27 +92,13 @@ export class FingerprintingService {
 
             return { fingerprint, identification: identificationResult };
         } finally {
-            // Clean up temp file uploaded by multer
             try { fs.unlinkSync(filePath); } catch (_) { /* ignore */ }
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // FIX D3: recordAndIdentify previously expected a Buffer passed
-    // from the controller, which decoded req.body.audioBlob (base64
-    // JSON). The frontend sends FormData with field 'audio', not JSON.
-    // With multer now in place, req.file.path is available in the
-    // controller — so we reuse uploadAndIdentify which accepts a path.
-    // This method is kept as a thin alias for clarity.
-    // ─────────────────────────────────────────────────────────────
-
     async identifyFromRecording(filePath, userId) {
         return this.uploadAndIdentify(filePath, userId);
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Admin: generate & store fingerprint for an existing DB song
-    // ─────────────────────────────────────────────────────────────
 
     async generateFingerprintForSong(songId) {
         const songResult = await query('SELECT file_path FROM songs WHERE id = $1', [songId]);
@@ -129,8 +109,6 @@ export class FingerprintingService {
 
         const filePath = songResult.rows[0].file_path;
 
-        // file_path is now a Supabase URL, not a local path → cannot fingerprint remotely.
-        // Fingerprinting requires a local copy of the file.
         if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
             throw new AppError(
                 'Song is stored remotely (Supabase). Download the file locally before generating a fingerprint.',

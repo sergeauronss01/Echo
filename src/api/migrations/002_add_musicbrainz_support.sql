@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS songs_lyrics (
     lyrics_content TEXT,
     source VARCHAR(100),
     source_id VARCHAR(255),
-    synced TEXT,
+    synced TEXT NULL,
     fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
 );
