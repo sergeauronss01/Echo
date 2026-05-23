@@ -28,19 +28,22 @@ export class AcoustIDService {
         return await httpQueue.add(async () => {
             try {
                 const params = {
-                    client_id: this.clientId,
+                    client: this.clientId,
                     duration: Math.round(duration / 1000),
                     fingerprint: fingerprint,
                     meta: 'recordings',
                 };
 
                 console.log('🔍 AcoustID DEBUG - Using POST with body:', {
-                    client_id: this.clientId,
+                    client: this.clientId,
                     duration_ms: duration,
                     duration_s: Math.round(duration / 1000),
                     fingerprint_type: typeof fingerprint,
                     fingerprint_length: fingerprint ? fingerprint.length : 0,
                 });
+
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 5000);
 
                 const response = await fetch(
                     `${ACOUSTID_API}/lookup`,
@@ -48,9 +51,10 @@ export class AcoustIDService {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams(params).toString(),
-                        timeout: 5000
+                        signal: controller.signal
                     }
                 );
+                clearTimeout(timer);
 
                 if (!response.ok) {
                     throw new Error(`AcoustID API error: ${response.status}`);
@@ -58,6 +62,7 @@ export class AcoustIDService {
 
                 const data = await response.json();
 
+                console.log('🎯 AcoustID raw response:', JSON.stringify(data, null, 2));
                 if (data.status !== 'ok') {
                     throw new Error(`AcoustID error: ${data.error}`);
                 }
@@ -70,6 +75,7 @@ export class AcoustIDService {
                 }
 
                 const result = data.results[0];
+                const resultScore = result.score || 0; 
                 const recordings = result.recordings || [];
 
                 const matches = recordings
@@ -78,7 +84,7 @@ export class AcoustIDService {
                         mbid: rec.id,
                         title: rec.title,
                         artists: (rec.artists || []).map(a => a.name).join(', '),
-                        score: rec.score || 0,
+                        score: resultScore,
                         duration: rec.duration || null,
                     }));
 

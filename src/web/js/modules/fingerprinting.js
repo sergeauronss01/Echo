@@ -185,7 +185,8 @@ async function processAudio(file) {
 
     try {
         const data = await api.fingerprintUpload(file);
-        displayMatches(data.data?.matches || data.matches || []);
+        const identification = data.data?.identification || {};
+        displayMatches(identification.matches || [], identification.confidence || 0);
     } catch (err) {
         showError(err.message || 'Failed to identify song');
     } finally {
@@ -204,7 +205,8 @@ async function processRecording(audioBlob) {
 
     try {
         const data = await api.fingerprintRecord(audioBlob);
-        displayMatches(data.data?.matches || data.matches || []);
+        const identification = data.data?.identification || {};
+        displayMatches(identification.matches || [], identification.confidence || 0);
     } catch (err) {
         showError(err.message || 'Failed to analyze recording');
     } finally {
@@ -212,7 +214,7 @@ async function processRecording(audioBlob) {
     }
 }
 
-function displayMatches(matches) {
+function displayMatches(matches, confidence = 0) {
     const resultsEl = document.getElementById('results');
     const matchesListEl = document.getElementById('matchesList');
 
@@ -227,11 +229,13 @@ function displayMatches(matches) {
             <div class="match-item">
                 <div class="match-info">
                     <h4>${match.title || 'Unknown'}</h4>
-                    <p>${match.artist || 'Unknown Artist'}</p>
+                    <p>${match.artists || 'Unknown Artist'}</p>
                     <div class="confidence-bar">
                         <div class="confidence-fill" style="width: ${(match.confidence || 0) * 100}%"></div>
                     </div>
-                    <span class="confidence-text">${((match.confidence || 0) * 100).toFixed(1)}% match</span>
+                    <span class="confidence-text">
+                        ${((confidence || 0) * 100).toFixed(1)}% match
+                    </span>
                 </div>
                 <button class="add-btn" data-song-id="${match.songId}">Add to Library</button>
             </div>
@@ -272,9 +276,9 @@ async function loadMatchHistory() {
         historyList.innerHTML = history.map(item => `
             <div class="history-item">
                 <div class="history-info">
-                    <h4>${item.matchedSong?.title || 'Unknown'}</h4>
-                    <p>${item.matchedSong?.artist || 'Unknown Artist'}</p>
-                    <span class="history-date">${new Date(item.createdAt).toLocaleDateString()}</span>
+                    <h4>${item.title || 'Unknown'}</h4>
+                    <p>${item.artist || 'Unknown Artist'}</p>
+                    <span class="history-date">${new Date(item.matched_at).toLocaleDateString()}</span>
                 </div>
                 <span class="confidence-badge">${((item.confidence || 0) * 100).toFixed(0)}%</span>
             </div>

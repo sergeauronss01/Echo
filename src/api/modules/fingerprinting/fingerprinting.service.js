@@ -64,15 +64,6 @@ export class FingerprintingService {
 
     async identifyViaAcoustID(fingerprint, duration) {
         try {
-            console.log('📍 identifyViaAcoustID called with:', {
-                fingerprint_method: fingerprint.method,
-                fingerprint_keys: Object.keys(fingerprint),
-                fingerprint_value_type: typeof fingerprint.fingerprint,
-                fingerprint_value: fingerprint.fingerprint ? fingerprint.fingerprint.substring(0, 100) : 'UNDEFINED',
-                duration_ms: duration,
-                duration_s: Math.round(duration / 1000)
-            });
-
             if (fingerprint.method !== 'chromaprint') {
                 console.warn('AcoustID works best with Chromaprint fingerprints');
             }
@@ -86,16 +77,7 @@ export class FingerprintingService {
 
     async uploadAndIdentify(filePath, userId) {
         try {
-            console.log('📍 uploadAndIdentify started for file:', filePath);
-
             const fingerprint = await this.generateFingerprint(filePath);
-            console.log('✅ Fingerprint generated:', {
-                method: fingerprint.method,
-                has_fingerprint_field: 'fingerprint' in fingerprint,
-                fingerprint_value: fingerprint.fingerprint ? fingerprint.fingerprint.substring(0, 100) : 'UNDEFINED',
-                duration: fingerprint.duration,
-                all_keys: Object.keys(fingerprint)
-            });
 
             const identificationResult = await this.identifyViaAcoustID(
                 fingerprint,
@@ -103,11 +85,17 @@ export class FingerprintingService {
             );
 
             const matched = identificationResult.mbids?.[0] || null;
+            let matchedSongId = null;
+            if (matched) {
+                const songResult = await query('SELECT id FROM songs WHERE mbid::text = $1', [matched]);
+                matchedSongId = songResult.rows[0]?.id || null;
+            }
+
             await query(
                 `INSERT INTO fingerprint_matches
                      (user_id, uploaded_fingerprint, matched_song_id, confidence)
-                 VALUES ($1, $2, NULL, $3)`,
-                [userId, JSON.stringify(fingerprint), identificationResult.confidence || 0]
+                 VALUES ($1, $2, $3, $4)`,
+                [userId, JSON.stringify(fingerprint), matchedSongId, identificationResult.confidence || 0]
             ).catch((err) => console.error('Match log error:', err.message));
 
             return { fingerprint, identification: identificationResult };
