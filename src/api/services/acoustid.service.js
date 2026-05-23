@@ -27,16 +27,29 @@ export class AcoustIDService {
 
         return await httpQueue.add(async () => {
             try {
-                const params = new URLSearchParams({
+                const params = {
                     client_id: this.clientId,
                     duration: Math.round(duration / 1000),
                     fingerprint: fingerprint,
                     meta: 'recordings',
+                };
+
+                console.log('🔍 AcoustID DEBUG - Using POST with body:', {
+                    client_id: this.clientId,
+                    duration_ms: duration,
+                    duration_s: Math.round(duration / 1000),
+                    fingerprint_type: typeof fingerprint,
+                    fingerprint_length: fingerprint ? fingerprint.length : 0,
                 });
 
                 const response = await fetch(
-                    `${ACOUSTID_API}/lookup?${params}`,
-                    { timeout: 5000 }
+                    `${ACOUSTID_API}/lookup`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams(params).toString(),
+                        timeout: 5000
+                    }
                 );
 
                 if (!response.ok) {

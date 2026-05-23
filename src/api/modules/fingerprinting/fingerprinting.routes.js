@@ -22,15 +22,14 @@ const router = express.Router();
 router.post(
     '/upload',
     authenticate,
-    upload.single('audio'),          // field name 'audio' — matches frontend FormData
+    upload.single('audio'),
     (req, res, next) => fingerprintingController.uploadAndIdentify(req, res, next)
 );
 
-// Send a recorded audio blob for identification
 router.post(
     '/record',
     authenticate,
-    upload.single('audio'),          // frontend sends FormData with field 'audio'
+    upload.single('audio'),
     (req, res, next) => fingerprintingController.recordAndIdentify(req, res, next)
 );
 
@@ -50,7 +49,6 @@ router.post(
     (req, res, next) => fingerprintingController.batchGenerate(req, res, next)
 );
 
-//Get the current user's fingerprint match history
 router.get(
     '/history',
     authenticate,

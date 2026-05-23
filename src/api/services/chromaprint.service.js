@@ -13,15 +13,23 @@ export class ChromaprintService {
                 timeout: 30000,
             });
 
+            console.log('📍 fpcalc RAW stdout length:', stdout.length);
+            console.log('📍 fpcalc RAW stdout:', JSON.stringify(stdout.substring(0, 300)));
+
             const lines = stdout.split('\n');
+            console.log('📍 Number of lines:', lines.length);
+            console.log('📍 All lines:', lines.map((l, i) => `Line ${i}: ${JSON.stringify(l.substring(0, 100))}`));
+
             let fingerprint = null;
             let duration = null;
 
             for (const line of lines) {
                 if (line.startsWith('FINGERPRINT=')) {
-                    fingerprint = line.substring('FINGERPRINT='.length);
+                    fingerprint = line.substring('FINGERPRINT='.length).trim();
+                    console.log('📍 Extracted FINGERPRINT, length:', fingerprint.length);
                 } else if (line.startsWith('DURATION=')) {
-                    duration = parseInt(line.substring('DURATION='.length));
+                    duration = parseInt(line.substring('DURATION='.length).trim());
+                    console.log('📍 Extracted DURATION:', duration);
                 }
             }
 
@@ -31,12 +39,12 @@ export class ChromaprintService {
 
             return {
                 fingerprint,
-                duration,
+                duration: duration * 1000,
                 method: 'chromaprint',
             };
         } catch (err) {
             console.error('Chromaprint fingerprinting failed:', err.message);
-            throw new AppError(`Chromaprint fingerprinting failed: ${err.message}`, 500);   
+            throw new AppError(`Chromaprint fingerprinting failed: ${err.message}`, 500);
         }
     }
 

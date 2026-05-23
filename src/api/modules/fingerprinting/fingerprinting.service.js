@@ -41,7 +41,7 @@ export class FingerprintingService {
     async generateEssentiaFingerprint(filePath) {
         try {
         const pythonScript = path.join(__dirname, 'essentia_fingerprint.py');
-        
+
         const pythonOrPython3 = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
 
             const { stdout } = await execFileAsync(
@@ -50,7 +50,8 @@ export class FingerprintingService {
                 { timeout: 120000, maxBuffer: 10 * 1024 * 1024 }
             );
 
-            return JSON.parse(stdout);
+            const result = JSON.parse(stdout);
+            return { ...result, fingerprint: result.fingerprint_hash };
         } catch (err) {
             console.error('Fingerprint generation (Essentia fallback) failed:', err.message);
             throw new AppError(`Fingerprint generation failed: ${err.message}`, 500);
@@ -63,6 +64,15 @@ export class FingerprintingService {
 
     async identifyViaAcoustID(fingerprint, duration) {
         try {
+            console.log('📍 identifyViaAcoustID called with:', {
+                fingerprint_method: fingerprint.method,
+                fingerprint_keys: Object.keys(fingerprint),
+                fingerprint_value_type: typeof fingerprint.fingerprint,
+                fingerprint_value: fingerprint.fingerprint ? fingerprint.fingerprint.substring(0, 100) : 'UNDEFINED',
+                duration_ms: duration,
+                duration_s: Math.round(duration / 1000)
+            });
+
             if (fingerprint.method !== 'chromaprint') {
                 console.warn('AcoustID works best with Chromaprint fingerprints');
             }
@@ -76,7 +86,17 @@ export class FingerprintingService {
 
     async uploadAndIdentify(filePath, userId) {
         try {
+            console.log('📍 uploadAndIdentify started for file:', filePath);
+
             const fingerprint = await this.generateFingerprint(filePath);
+            console.log('✅ Fingerprint generated:', {
+                method: fingerprint.method,
+                has_fingerprint_field: 'fingerprint' in fingerprint,
+                fingerprint_value: fingerprint.fingerprint ? fingerprint.fingerprint.substring(0, 100) : 'UNDEFINED',
+                duration: fingerprint.duration,
+                all_keys: Object.keys(fingerprint)
+            });
+
             const identificationResult = await this.identifyViaAcoustID(
                 fingerprint,
                 fingerprint.duration
