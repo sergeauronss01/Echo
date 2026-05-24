@@ -193,7 +193,17 @@ class APIService {
     }
 
     async getPlaylistDetails(playlistId) {
-        return this.request(`/playlists/${playlistId}`);
+        const result = await this.request(`/playlists/${playlistId}`);
+        const playlist = result.data ?? result;
+
+        if (playlist.songs?.length) {
+            playlist.songs = playlist.songs.map(item => {
+                const song = item.song ?? item;
+                return { ...item, song: this.normalizeSong(song) };
+            });
+        }
+
+        return result.data ? { ...result, data: playlist } : playlist;
     }
 
     async updatePlaylist(playlistId, name, description, isPublic) {

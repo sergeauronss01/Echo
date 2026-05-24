@@ -117,27 +117,11 @@ main{
 
 #searchBtn img{margin-left: 6px;}
 
-#navDownloadBtn {
-    background: var(--accent-blue);
-    color: var(--bg);
-    border: 2px solid var(--bg);
-    font-family: "Funnel Sans", "Noto Sans JP", "Noto Sans KR", "Noto Sans SC";
-    padding: 8px 16px;
-    border-radius: 20px;
-    transition: 0.2s;
-}
-
-#navDownloadBtn:hover {
-    background: var(--bg);
-    color: var(--accent-blue);
-    border: 2px solid var(--accent-blue);
-}
-
 #logInBtn, #login-redirect-btn {
     background: var(--text-main);
     color: var(--bg);
     border: 2px solid var(--bg);
-    font-family: "Funnel Sans", "Noto Sans JP", "Noto Sans KR", "Noto Sans SC";
+    font-family: "Funnel Sans";
     padding: 8px 16px;
     border-radius: 20px;
     transition: 0.2s;
@@ -414,11 +398,18 @@ main{
     opacity: 0.9;
 }
 
+.action-btn{
+    width: 18px;
+}
+
 #navLibraryBtn, #navHistoryBtn, #navDownloadBtn, #navFingerprintBtn {
     background: var(--accent-blue);
     color: white;
+    display: flex;
+    align-items: center;
+    gap: 3px;
     border: none;
-    padding: 8px 16px;
+    padding: 5px 16px;
     border-radius: 20px;
     cursor: pointer;
     transition: 0.3s;
@@ -427,7 +418,9 @@ main{
 }
 
 #navLibraryBtn:hover, #navHistoryBtn:hover, #navDownloadBtn:hover, #navFingerprintBtn:hover {
-    opacity: 0.8;
+    background: var(--bg);
+    color: var(--accent-blue);
+    border: 2px solid var(--accent-blue);
 }
 
 .account-btn {
@@ -596,6 +589,13 @@ main{
     justify-content: center;
     color: var(--text-dim);
     font-size: 12px;
+}
+
+.action-panel {
+    background: var(--surface-bg);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
 }
 
 /* --- Search Results --- */

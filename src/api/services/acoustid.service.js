@@ -34,14 +34,6 @@ export class AcoustIDService {
                     meta: 'recordings',
                 };
 
-                console.log('🔍 AcoustID DEBUG - Using POST with body:', {
-                    client: this.clientId,
-                    duration_ms: duration,
-                    duration_s: Math.round(duration / 1000),
-                    fingerprint_type: typeof fingerprint,
-                    fingerprint_length: fingerprint ? fingerprint.length : 0,
-                });
-
                 const controller = new AbortController();
                 const timer = setTimeout(() => controller.abort(), 5000);
 
@@ -62,7 +54,6 @@ export class AcoustIDService {
 
                 const data = await response.json();
 
-                console.log('🎯 AcoustID raw response:', JSON.stringify(data, null, 2));
                 if (data.status !== 'ok') {
                     throw new Error(`AcoustID error: ${data.error}`);
                 }

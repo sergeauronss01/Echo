@@ -29,7 +29,7 @@ export class PlaylistsService {
         const playlist = playlistResult.rows[0];
 
         const songsResult = await query(
-            `SELECT s.id, s.youtube_id, s.title, s.artist, s.duration, s.album, s.genre, s.year, ps.position
+            `SELECT s.id, s.youtube_id, s.title, s.artist, s.duration, s.album, s.genre, s.year, s.cover_art_url, ps.position
              FROM playlist_songs ps
              JOIN songs s ON ps.song_id = s.id
              WHERE ps.playlist_id = $1

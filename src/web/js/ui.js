@@ -263,10 +263,12 @@ class UIManager {
 
                     <div class="playlist-controls">
                         ${authManager.isAuthenticated ? `
-                            <button id="addSongsBtn"    class="btn-accent">+ Add Songs</button>
+                            <button id="addSongsBtn"     class="btn-accent">+ Add Songs</button>
                             <button id="editPlaylistBtn" class="btn-secondary">Edit Playlist</button>
                         ` : ''}
                     </div>
+
+                    <div id="playlistActionPanel"></div>
 
                     <div id="playlistSongs" class="songs-list">
                         ${p.songs?.length
@@ -277,13 +279,20 @@ class UIManager {
                     </div>
                 </div>
             `;
+
+            document.getElementById('addSongsBtn')
+                ?.addEventListener('click', () => this._showAddSongsPanel(playlistId, p.songs || []));
+
+            document.getElementById('editPlaylistBtn')
+                ?.addEventListener('click', () => this._showEditPlaylistPanel(playlistId, p));
+
         } catch (err) {
             mainContainer.innerHTML = `<p>Error loading playlist: ${err.message}</p>`;
         }
     }
 
     _createPlaylistSongRow(song, index) {
-        const safeUrl = this._cleanImageUrl(song?.coverUrl || song?.cover_art_url);
+        const safeUrl = this._cleanImageUrl(song?.cover_art_url || song?.coverUrl);
         return `
             <div class="playlist-song-row" data-song-id="${song.id}">
                 <span class="song-index">${index + 1}</span>
@@ -293,7 +302,7 @@ class UIManager {
                     <h4>${song.title}</h4>
                     <p>${song.artist || 'Unknown Artist'}</p>
                 </div>
-                <button class="play-btn-row" data-song-id="${song.id}">▶</button>
+                <button class="play-btn-row" data-song-id="${song.id}"><img src="assets/play_arrow.svg" alt="Play"></button>
             </div>
         `;
     }
@@ -415,7 +424,7 @@ class UIManager {
                 <div class="song-cover">
                     <img src="${safeUrl}" referrerpolicy="no-referrer"
                          alt="${song?.title || 'Song'}">
-                    <button class="play-btn" data-song-id="${song?.id}" title="Play">▶</button>
+                    <button class="play-btn" data-song-id="${song?.id}" title="Play"><img src="assets/play_arrow.svg" alt="Play"></button>
                 </div>
                 <div class="song-info">
                     <h4 class="song-title">${song?.title || 'Unknown'}</h4>
@@ -430,7 +439,7 @@ class UIManager {
             <div class="playlist-card" data-playlist-id="${playlist.id}">
                 <div class="playlist-cover">
                     <div class="playlist-thumbnail">${playlist.songs?.length || 0} songs</div>
-                    <button class="play-btn-playlist">▶</button>
+                    <button class="play-btn-playlist"><img src="assets/play_arrow.svg" alt="Play"></button>
                 </div>
                 <div class="playlist-info">
                     <h4 class="playlist-name">${playlist.name}</h4>
@@ -441,6 +450,155 @@ class UIManager {
     }
 
     // ── Utilities ───────────────────────────────────────────────
+    async _showAddSongsPanel(playlistId, existingSongs) {
+        const panel      = document.getElementById('playlistActionPanel');
+        const existingIds = new Set(existingSongs.map(item => (item.song ?? item).id));
+
+        panel.innerHTML = `
+            <div class="action-panel">
+                <h3>Add Songs</h3>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <input type="text" id="songSearchInput"
+                        placeholder="Search by title or artist…"
+                        style="flex:1; background:var(--bg); border:1px solid #333;
+                            color:white; padding:10px; border-radius:6px;">
+                    <button id="songSearchBtn" class="btn-accent">Search</button>
+                </div>
+                <div id="songSearchResults"></div>
+            </div>
+        `;
+
+        const doSearch = async () => {
+            const q = document.getElementById('songSearchInput').value.trim();
+            if (!q) return;
+
+            const resultsDiv = document.getElementById('songSearchResults');
+            resultsDiv.innerHTML = '<div class="loading">Searching…</div>';
+
+            try {
+                const response = await api.searchSongs(q, 10);
+                const songs    = response.data || [];
+
+                if (!songs.length) {
+                    resultsDiv.innerHTML = '<p>No songs found.</p>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = songs.map(song => `
+                    <div class="playlist-song-row" style="margin-bottom:8px;">
+                        <img src="${this._cleanImageUrl(song.cover_art_url)}"
+                            class="song-thumb" referrerpolicy="no-referrer">
+                        <div class="song-row-info">
+                            <h4>${song.title}</h4>
+                            <p>${song.artist || 'Unknown Artist'}</p>
+                        </div>
+                        <button class="add-to-playlist-btn btn-accent"
+                                data-song-id="${song.id}"
+                                ${existingIds.has(song.id) ? 'disabled' : ''}>
+                            ${existingIds.has(song.id) ? '✓ Added' : '+ Add'}
+                        </button>
+                    </div>
+                `).join('');
+
+                resultsDiv.querySelectorAll('.add-to-playlist-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const songId = parseInt(btn.dataset.songId);
+                        btn.disabled    = true;
+                        btn.textContent = 'Adding…';
+                        try {
+                            await api.addSongToPlaylist(playlistId, songId);
+                            btn.textContent = '✓ Added';
+                            existingIds.add(songId);
+                            const meta = document.querySelector('.playlist-meta');
+                            if (meta) meta.textContent = `${existingIds.size} songs`;
+                        } catch (err) {
+                            btn.disabled    = false;
+                            btn.textContent = '+ Add';
+                            alert(`Error: ${err.message}`);
+                        }
+                    });
+                });
+            } catch (err) {
+                document.getElementById('songSearchResults').innerHTML =
+                    `<p>Error: ${err.message}</p>`;
+            }
+        };
+
+        document.getElementById('songSearchBtn')
+            ?.addEventListener('click', doSearch);
+        document.getElementById('songSearchInput')
+            ?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+    }
+
+    _showEditPlaylistPanel(playlistId, playlist) {
+        const panel = document.getElementById('playlistActionPanel');
+
+        panel.innerHTML = `
+            <div class="action-panel">
+                <h3>Edit Playlist</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
+                    <input type="text" id="editPlaylistName"
+                        value="${playlist.name || ''}"
+                        placeholder="Playlist name"
+                        style="background:var(--bg); border:1px solid #333;
+                            color:white; padding:10px; border-radius:6px;">
+                    <textarea id="editPlaylistDesc"
+                        placeholder="Description (optional)"
+                        style="background:var(--bg); border:1px solid #333; color:white;
+                            padding:10px; border-radius:6px; resize:vertical; min-height:80px;"
+                    >${playlist.description || ''}</textarea>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="editPlaylistPublic"
+                            ${playlist.is_public ? 'checked' : ''}>
+                        Make playlist public
+                    </label>
+                    <div style="display:flex; gap:10px;">
+                        <button id="savePlaylistBtn" class="btn-primary">Save</button>
+                        <button id="cancelEditBtn" class="btn-secondary">Cancel</button>
+                        <button id="deletePlaylistBtn" class="btn-primary">Delete</button>
+                    </div>
+                    <span id="editPlaylistError" class="error-message"></span>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('savePlaylistBtn')?.addEventListener('click', async () => {
+            const name     = document.getElementById('editPlaylistName').value.trim();
+            const desc     = document.getElementById('editPlaylistDesc').value.trim();
+            const isPublic = document.getElementById('editPlaylistPublic').checked;
+            const errorEl  = document.getElementById('editPlaylistError');
+
+            if (!name) { errorEl.textContent = 'Name is required.'; return; }
+
+            const btn = document.getElementById('savePlaylistBtn');
+            btn.textContent = 'Saving…';
+            btn.disabled    = true;
+
+            try {
+                await api.updatePlaylist(playlistId, name, desc, isPublic);
+
+                // Update header live without reloading
+                document.querySelector('.playlist-header-info h1').textContent = name;
+                document.querySelector('.playlist-header-info p').textContent  = desc;
+                panel.innerHTML = '';
+            } catch (err) {
+                errorEl.textContent = err.message;
+                btn.textContent     = 'Save';
+                btn.disabled        = false;
+            }
+        });
+
+        document.getElementById('cancelEditBtn')
+            ?.addEventListener('click', () => { panel.innerHTML = ''; });
+        
+        document.getElementById('detelePlaylistBtn')?.addEventListener('click', () => {
+            try{
+                //await api.deletePlaylist(playlistId);
+            } catch (err) {
+                console.log(err.message);
+            }
+        });
+    }
 
     _cleanImageUrl(url) {
         if (!url || url === 'null' || url === 'undefined' || url === '') {

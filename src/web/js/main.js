@@ -82,7 +82,7 @@ async function setupPlaylistSidebar() {
 }
 
 window.addEventListener('click', (e) => {
-    const playBtn = e.target.closest('.play-btn');
+    const playBtn = e.target.closest('.play-btn, .play-btn-row');
     if (playBtn) {
         uiManager.playSong(playBtn.dataset.songId);
         return;

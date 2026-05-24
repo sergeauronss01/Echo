@@ -231,25 +231,42 @@ function displayMatches(matches, confidence = 0) {
                     <h4>${match.title || 'Unknown'}</h4>
                     <p>${match.artists || 'Unknown Artist'}</p>
                     <div class="confidence-bar">
-                        <div class="confidence-fill" style="width: ${(match.confidence || 0) * 100}%"></div>
+                        <div class="confidence-fill" style="width: ${(confidence * 100).toFixed(1)}%"></div>
                     </div>
-                    <span class="confidence-text">
-                        ${((confidence || 0) * 100).toFixed(1)}% match
-                    </span>
+                    <span class="confidence-text">${(confidence * 100).toFixed(1)}% match</span>
                 </div>
-                <button class="add-btn" data-song-id="${match.songId}">Add to Library</button>
+                <button class="add-btn"
+                    data-title="${match.title}"
+                    data-artist="${match.artists}">
+                    Add to Library
+                </button>
             </div>
         `).join('');
 
         matchesListEl.querySelectorAll('.add-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const songId = btn.dataset.songId;
+                const title  = btn.dataset.title;
+                const artist = btn.dataset.artist;
+                const query  = `${artist} - ${title}`;
+
+                btn.textContent = '⏳ Downloading…';
+                btn.disabled = true;
+
                 try {
-                    await api.addDownloadedSong(Number(songId));
-                    btn.textContent = '✓ Added';
-                    btn.disabled = true;
-                } catch (error) {
-                    alert(`Error adding song: ${error.message}`);
+                    const response = await api.batchDownload([query]);
+                    const result   = response.results?.[0];
+
+                    if (result?.success) {
+                        btn.textContent = '✓ Added to Library';
+                    } else {
+                        btn.textContent = 'Add to Library';
+                        btn.disabled = false;
+                        alert(`Download failed: ${result?.error || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    btn.textContent = 'Add to Library';
+                    btn.disabled = false;
+                    alert(`Error: ${err.message}`);
                 }
             });
         });

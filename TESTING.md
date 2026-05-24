@@ -142,7 +142,7 @@ Empty query does nothing (no navigation).
 
 ### 2.4 Song playback from card
 **Steps**
-1. Hover a song card — a play button (▶) appears.
+1. Hover a song card — a play button appears.
 2. Click it.
 
 **Expected**
@@ -507,7 +507,7 @@ Confirmed by the global `error` event listener on `img` tags.
 your top songs" instead of attempting an authenticated request.
 
 ### 13.3 Playing a song card vs clicking the card body
-**Expected** — Both the ▶ button and clicking anywhere on the card trigger playback
+**Expected** — Both the play button and clicking anywhere on the card trigger playback
 (handled by global click delegation in `main.js`).
 
 ### 13.4 Very long song titles / artist names
