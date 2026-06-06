@@ -420,7 +420,7 @@ via `src/api/utils/runMigrations.js`, tracked in `schema_migrations`.
 |---|---|---|
 | song_id → songs | FK UNIQUE | one row per song |
 | lyrics_content | TEXT | plain text |
-| synced | BOOLEAN | true if LRC timed lyrics available |
+| synced | TEXT |  if LRC timed lyrics available |
 | source / source_id | VARCHAR | 'lrclib' + lrclib internal id |
 | fetched_at | TIMESTAMP | |
 
@@ -801,7 +801,6 @@ Set all JWT secrets and Supabase keys to production values. Never commit `.env`.
 |---|---|
 | Queue / next track | No automatic queue. After a song ends, playback stops (or repeats if repeat is on). |
 | Admin panel | `requireAdmin` works but there is no UI to set a user's role to 'admin'. Do it directly in Supabase: `UPDATE users SET role = 'admin' WHERE email = 'you@example.com';` |
-| Fingerprinting of remote songs | `generateFingerprintForSong` requires the audio to be on local disk. Songs already in Supabase Storage cannot be fingerprinted without re-downloading. |
 | Lyrics display | Lyrics are stored in the DB but there is no UI view to display them yet. |
 | Cover Art Archive | CAA images sometimes return 404 for releases without uploaded art. The browser falls back to the YouTube thumbnail via the `onerror` handler. |
 | YouTube quota | 10 000 units/day free. Each batch download uses 2 units/song. At scale, consider caching search results. |

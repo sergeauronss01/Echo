@@ -5,6 +5,8 @@
   "main": "src/api/server.js",
   "type": "module",
   "scripts": {
+    "fulldev": "npm run setup && npm run dev",
+    "fullstart": "npm run setup && npm run start",
     "start": "node src/api/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/api/server.js",
     "migrate": "node src/api/utils/runMigrations.js",
