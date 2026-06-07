@@ -135,7 +135,13 @@ class AuthManager {
             const password = loginForm.querySelector('input[type="password"]').value;
             try {
                 await this.login(email, password);
-                document.getElementById('homeBtn').click();
+                const { uiManager } = await import('./main.js');
+                await uiManager.showHome();
+                const playlistBar = document.getElementById('playlistBar');
+                if (playlistBar) {
+                    const { setupPlaylistSidebar } = await import('./main.js');
+                    await setupPlaylistSidebar();
+                }
             } catch (err) {
                 document.getElementById('loginError').textContent = err.message;
             }

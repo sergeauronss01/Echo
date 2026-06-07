@@ -3,8 +3,6 @@ import { authManager } from './auth.js';
 import { uiManager } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await api.ready();
-
     await authManager.checkAuthStatus();
 
     setupNavigation();

@@ -16,7 +16,7 @@
     "lint": "eslint src/ --fix",
     "build": "echo \"Build complete\"",
     "seed": "node src/api/utils/seedDatabase.js",
-    "setup": "npm install && py -3 -m pip install -r requirements.txt && npm run migrate"
+    "setup": "npm install && pip install -r requirements.txt && npm run migrate"
   },
   "keywords": [
     "music",

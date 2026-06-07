@@ -1,11 +1,13 @@
 import { api }         from './api.js';
 import { authManager } from './auth.js';
-import { loadSong }    from './player.js';
+import { loadSong, setQueue }    from './player.js';
 
 class UIManager {
     constructor() {
         this.currentSong = null;
         this.playlist    = [];
+        this.currentSongs = [];
+        this.isPlaylistMode = false;
         this._setupGlobalImageFallback();
     }
 
@@ -63,12 +65,23 @@ class UIManager {
 
     async loadRecentSongs() {
         try {
-            const response  = await api.getAllSongs(8);
             const container = document.getElementById('recentSongs');
             if (!container) return;
-            container.innerHTML = response.data?.length
-                ? response.data.map(s => this.createSongCard(s)).join('')
-                : '<p>No songs available</p>';
+
+            let response;
+            if (authManager.isAuthenticated) {
+                response = await api.getUserDownloadedSongs();
+                this.currentSongs = response.data || [];
+                this.isPlaylistMode = false;
+            } else {
+                container.innerHTML = '<p>Log in to see your recently added songs</p>';
+                return;
+            }
+
+            const displaySongs = (response.data || []).slice(0, 8);
+            container.innerHTML = displaySongs?.length
+                ? displaySongs.map(s => this.createSongCard(s)).join('')
+                : '<p>No songs in your library yet</p>';
         } catch (err) {
             console.error('Error loading recent songs:', err);
             const c = document.getElementById('recentSongs');
@@ -123,6 +136,8 @@ class UIManager {
 
         try {
             const response = await api.searchSongs(query, 50);
+            this.currentSongs = response.data || [];
+            this.isPlaylistMode = false;
             mainContainer.innerHTML = response.data?.length
                 ? `<div class="search-results">
                        <h2>Results for "${query}"</h2>
@@ -249,6 +264,10 @@ class UIManager {
             const playlist = await api.getPlaylistDetails(playlistId);
             const p = playlist.data ?? playlist;
 
+            const playlistSongs = p.songs?.map(item => item.song ?? item) || [];
+            this.currentSongs = playlistSongs;
+            this.isPlaylistMode = true;
+
             mainContainer.innerHTML = `
                 <div class="playlist-view">
                     <div class="playlist-header">
@@ -325,6 +344,9 @@ class UIManager {
             const response = await api.getUserDownloadedSongs();
             const songs    = response.data || [];
 
+            this.currentSongs = songs;
+            this.isPlaylistMode = false;
+
             mainContainer.innerHTML = `
                 <div class="library-view">
                     <h2>My Music Library</h2>
@@ -396,7 +418,9 @@ class UIManager {
         try {
             const response = await api.getSongDetails(songId);
             const song     = response.data;
-            await loadSong(song);
+
+            const queueToUse = this.currentSongs && this.currentSongs.length > 0 ? this.currentSongs : [song];
+            await loadSong(song, queueToUse, this.isPlaylistMode);
 
             const audio = document.getElementById('audioPlayer');
             if (audio) await audio.play().catch(console.error);

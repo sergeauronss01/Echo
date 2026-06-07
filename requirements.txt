@@ -3,4 +3,4 @@ numpy>=1.24.4
 scipy>=1.11.4
 soundfile==0.12.1
 yt-dlp>=2025.10.14
-python -m pip install --upgrade setuptools
+setuptools

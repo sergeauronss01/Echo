@@ -130,13 +130,6 @@ app.use('/api/history', historyRoutes);
 app.use('/api/fingerprinting', fingerprintingRoutes);
 
 /* --- Health & Root --- */
-app.get('/api/config', (req, res) => {
-    res.json({
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-    });
-});
-
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
