@@ -84,8 +84,39 @@
                 <span class="time total">--:--</span>
             </div>
         </div>
+
+        <!-- Right controls: lyrics toggle + volume -->
+        <div class="playerRightControls">
+            <button id="lyricsBtn" title="Lyrics">
+                <img src="assets/lyrics.svg" alt="lyrics">
+            </button>
+            <div class="volumeControl">
+                <img src="assets/volume.svg" alt="volume" class="volume-icon">
+                <input type="range" id="volumeSlider" min="0" max="100" value="100" class="volume-slider">
+            </div>
+        </div>
     </footer>
 
     <audio id="audioPlayer" crossorigin="anonymous"></audio>
+
+    <!-- Lyrics panel — slides in from the right over the main content area -->
+    <div id="lyricsPanel" class="lyrics-panel">
+        <div class="lyrics-panel-header">
+            <div class="lyrics-song-meta">
+                <span id="lyricsSongTitle" class="lyrics-meta-title"></span>
+                <span id="lyricsSongArtist" class="lyrics-meta-artist"></span>
+            </div>
+            <div class="lyrics-header-controls">
+                <div class="lyrics-type-toggle">
+                    <button id="syncedLyricsBtn" class="lyrics-toggle-btn active">Synced</button>
+                    <button id="plainLyricsBtn"  class="lyrics-toggle-btn">Plain</button>
+                </div>
+                <button id="closeLyricsBtn" class="close-lyrics-btn" title="Close lyrics">✕</button>
+            </div>
+        </div>
+        <div id="lyricsContent" class="lyrics-content">
+            <p class="lyrics-placeholder">Play a song to see lyrics</p>
+        </div>
+    </div>
 </body>
 </html>

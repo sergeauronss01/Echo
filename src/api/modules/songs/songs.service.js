@@ -39,7 +39,7 @@ export class SongsService {
 
     async getSong(songId) {
         const result = await query(
-            `SELECT s.*, sl.lyrics_content 
+            `SELECT s.*, sl.lyrics_content, sl.synced AS synced_lyrics
              FROM songs s
              LEFT JOIN songs_lyrics sl ON s.id = sl.song_id
              WHERE s.id = $1`,

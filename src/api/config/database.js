@@ -27,7 +27,7 @@ function parseConnectionUrl(connectionUrl) {
 const config = process.env.DATABASE_URL
     ? parseConnectionUrl(process.env.DATABASE_URL)
     : {
-        host: process.env.DB_HOST || 'localhost',
+        host: process.env.DB_HOST || '0.0.0.0',
         port: process.env.DB_PORT || 5432,
         database: process.env.DB_NAME || 'song_manager',
         user: process.env.DB_USER || 'postgres',

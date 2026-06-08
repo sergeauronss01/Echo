@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 export const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:3000/auth/callback'
+    'http://0.0.0.0:3000/auth/callback'
 );
 
 export const scopes = ['https://www.googleapis.com/auth/youtube.readonly'];
@@ -25,5 +25,5 @@ export const authorizationUrl = oauth2Client.generateAuthUrl({
 export const youtube = google.youtube({
     version: "v3",
     auth: process.env.YT_API_KEY,
-    headers: {'Referer': 'http://localhost:3000'}
+    headers: {'Referer': 'http://0.0.0.0:3000'}
 });

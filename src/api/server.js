@@ -27,41 +27,36 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* --- Security & Middleware --- */
-app.use(
-    helmet.contentSecurityPolicy({
-        directives: {
-        // 1. Default fallback
-        "default-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
-        
-        // 2. API / Database connections
-        "connect-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
-        
-        // 3. Audio/Video files
-        "media-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
-        
-        // 4. Images (Including YouTube thumbnails)
-        "img-src": [
-            "'self'", 
-            "data:", 
-            "https://outtpsqnptpihgyhznmy.supabase.co", 
-            "https://*.youtube.com", 
-            "https://*.ytimg.com"
-        ],
-        
-        // 5. CSS Styles
-        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        
-        // 6. Fonts
-        "font-src": ["'self'", "https://fonts.gstatic.com"],
-
-        // 7. Standard Helmet defaults (Highly recommended to keep)
-        "script-src": ["'self'"], // Add "'unsafe-inline'" here ONLY if your JS requires it
-        "object-src": ["'none'"],
-        "upgrade-insecure-requests": [],
-        },
-        crossOriginEmbedderPolicy: false,
-    })
-);
+// Disable strict CSP in development so other PCs can load assets smoothly
+if (process.env.NODE_ENV == 'production') {
+    app.use(
+        helmet.contentSecurityPolicy({
+            directives: {
+                "default-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+                "connect-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+                "media-src": ["'self'", "https://outtpsqnptpihgyhznmy.supabase.co"],
+                "img-src": [
+                    "'self'", 
+                    "data:", 
+                    "https://outtpsqnptpihgyhznmy.supabase.co", 
+                    "https://*.youtube.com", 
+                    "https://*.ytimg.com"
+                ],
+                "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                "font-src": ["'self'", "https://fonts.gstatic.com"],
+                "script-src": ["'self'", "'unsafe-inline'"], // Allowed unsafe-inline for dev flexibility
+                "object-src": ["'none'"],
+                "upgrade-insecure-requests": [],
+            },
+            crossOriginEmbedderPolicy: false,
+        })
+    );
+} else {
+    app.use(helmet({ 
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false
+    }));
+}
 
 // Rate limiting (enabled by default, can be disabled via env)
 const isRateLimitDisabled = process.env.DISABLE_RATE_LIMIT === 'true';
@@ -170,9 +165,9 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 const server = app.listen(PORT, async () => {
-    console.log(`🎵 Song Manager running on http://localhost:${PORT}`);
-    console.log(`📡 API available at http://localhost:${PORT}/api`);
-    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+    console.log(`🎵 Song Manager running on http://0.0.0.0:${PORT}`);
+    console.log(`📡 API available at http://0.0.0.0:${PORT}/api`);
+    console.log(`🏥 Health check: http://0.0.0.0:${PORT}/health`);
 
     if (process.env.NODE_ENV !== 'production') {
         try {
