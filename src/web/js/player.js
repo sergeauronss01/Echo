@@ -15,19 +15,17 @@ const pausePlayBtn = document.getElementById('pausePlayBtn');
 const pausePlayImg = pausePlayBtn?.querySelector('img');
 const repeatBtn = document.getElementById('repeatBtn');
 const repeatBtnImg = repeatBtn?.querySelector('img');
-const shuffleBtn = document.getElementById('shuffleBtn'); // From File 1
-const shuffleBtnImg = shuffleBtn?.querySelector('img');     // From File 1
-const nextBtn = document.getElementById('nextBtn');       // From File 1
-const previousBtn = document.getElementById('previousBtn'); // From File 1
+const shuffleBtn = document.getElementById('shuffleBtn'); 
+const shuffleBtnImg = shuffleBtn?.querySelector('img');   
+const nextBtn = document.getElementById('nextBtn');    
+const previousBtn = document.getElementById('previousBtn');
 const songNameEl = document.querySelector('.songName');
 const artistNameEl = document.querySelector('.artistName');
 const songCoverEl = document.querySelector('.songCover');
 const audioElement = document.getElementById('audioPlayer');
 
-// Volume (From File 2)
 const volumeSlider = document.getElementById('volumeSlider');
 
-// Lyrics panel (From File 2)
 const lyricsBtn = document.getElementById('lyricsBtn');
 const lyricsBtnImg = lyricsBtn?.querySelector('img');
 const lyricsPanel = document.getElementById('lyricsPanel');
@@ -55,17 +53,15 @@ const REPEAT_MODES = ['off', 'all', 'one'];
 let repeatModeIndex = 0;
 let repeatMode = REPEAT_MODES[repeatModeIndex];
 
-// Queue Management (From File 1)
 let queue = [];
 let currentQueueIndex = -1;
 let isPlaylistMode = false;
 let isShuffleMode = false;
 let shuffledQueue = [];
 
-// Supabase URL (Priority: File 2)
 const supabaseUrl = 'https://outtpsqnptpihgyhznmy.supabase.co';
 
-// ─── Lyrics State (From File 2) ───────────────────────────────────────────────
+// ─── Lyrics State ───────────────────────────────────────────────
 
 let currentPlainLyrics = null;   
 let syncedLyricsData = [];     
@@ -109,7 +105,6 @@ if (audio) {
             api.logPlayback(currentSongId, played, total).catch(console.error);
         }
 
-        // Union: Retained File 2's specific 'one' logic, mapped File 1's queue traversal to 'all' & 'off'
         if (repeatMode === 'one') {
             audio.currentTime = isNaN(audio.duration) ? 0 : 0;
             setCurrentTime(0);
@@ -150,7 +145,7 @@ function seekToPercent(percent) {
     setCurrentTime(duration * percent);
 }
 
-// ─── Volume (Priority: File 2) ────────────────────────────────────────────────
+// ─── Volume ────────────────────────────────────────────────
 
 function updateVolumeTrack() {
     if (!volumeSlider) return;
@@ -165,7 +160,7 @@ if (volumeSlider) {
     updateVolumeTrack(); 
 }
 
-// ─── Lyrics Parser & Rendering (Priority: File 2) ─────────────────────────────
+// ─── Lyrics Parser & Rendering ─────────────────────────────
 
 function parseLRC(lrcText) {
     if (!lrcText) return [];
@@ -268,7 +263,7 @@ function closeLyricsPanel() {
     if (lyricsBtnImg) lyricsBtnImg.src = 'assets/lyrics.svg';
 }
 
-// ─── Queue Management (From File 1) ───────────────────────────────────────────
+// ─── Queue Management ───────────────────────────────────────────
 
 export function setQueue(newQueue, startIndex = 0, isPlaylist = false) {
     queue = newQueue || [];
@@ -369,7 +364,6 @@ if (repeatBtn) {
     });
 }
 
-// Queue listeners (From File 1)
 if (shuffleBtn) {
     shuffleBtn.addEventListener('click', () => {
         if (!hasLoadedSong || queue.length === 0) return;
@@ -402,6 +396,7 @@ if (timeline) {
         seekToPercent(getPercentFromEvent(e));
         document.body.style.userSelect = 'none';
     });
+    
     timeline.addEventListener('touchstart', e => {
         if (!hasLoadedSong) return;
         isDragging = true;
@@ -416,17 +411,20 @@ document.addEventListener('mousemove', e => {
     if (!isDragging || !timeline) return;
     seekToPercent(getPercentFromEvent(e));
 });
+
 document.addEventListener('mouseup', () => {
     if (!isDragging) return;
     isDragging = false;
     timeline?.classList.remove('active');
     document.body.style.userSelect = '';
 });
+
 document.addEventListener('touchmove', e => {
     if (!isDragging || !timeline) return;
     seekToPercent(getPercentFromEvent(e));
     e.preventDefault();
 }, { passive: false });
+
 document.addEventListener('touchend', () => {
     if (!isDragging) return;
     isDragging = false;
@@ -434,10 +432,10 @@ document.addEventListener('touchend', () => {
     document.body.style.userSelect = '';
 }, { passive: false });
 
-// Lyrics Listeners (From File 2)
 lyricsBtn?.addEventListener('click', () => {
     lyricsVisible ? closeLyricsPanel() : openLyricsPanel();
 });
+
 closeLyricsBtn?.addEventListener('click', closeLyricsPanel);
 syncedLyricsBtn?.addEventListener('click', () => {
     lyricsMode = 'synced';
@@ -447,12 +445,14 @@ syncedLyricsBtn?.addEventListener('click', () => {
     renderLyrics();
     requestAnimationFrame(jumpToCurrentLyric);
 });
+
 plainLyricsBtn?.addEventListener('click', () => {
     lyricsMode = 'plain';
     plainLyricsBtn.classList.add('active');
     syncedLyricsBtn?.classList.remove('active');
     renderLyrics();
 });
+
 lyricsContent?.addEventListener('click', e => {
     const line = e.target.closest('.lyrics-line');
     if (!line || !line.dataset.time) return;
@@ -463,7 +463,7 @@ lyricsContent?.addEventListener('click', e => {
     }
 });
 
-// ─── Song loading (Union implementation) ──────────────────────────────────────
+// ─── Song loading ──────────────────────────────────────
 
 export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
     if (!song?.id) return;
@@ -474,7 +474,7 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
     currentSongTitle = song.title || 'Unknown';
     currentSongArtist = song.artist || 'Unknown Artist';
 
-    // Queue Logic (From File 1)
+    // Queue Logic
     if (queueToLoad && queueToLoad.length > 0) {
         queue = queueToLoad;
         currentQueueIndex = Math.max(0, Math.min(queue.findIndex(s => s.id === song.id), queue.length - 1));
@@ -488,12 +488,12 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
         isPlaylistMode = false;
     }
 
-    // Lyrics State (From File 2)
+    // Lyrics State 
     currentPlainLyrics = song.lyrics_content || null;
     syncedLyricsData = parseLRC(song.synced_lyrics || null);
     lastActiveLyricsIndex = -1;
 
-    // Stream URL (Priority: File 2 Supabase implementation)
+    // Stream URL 
     const streamUrl = `${supabaseUrl}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a`;
 
     if (songNameEl) songNameEl.textContent = currentSongTitle;
@@ -502,7 +502,8 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
 
     current = 0;
     isPlaying = false;
-    duration = typeof song.duration === 'number' && song.duration > 0 ? song.duration : duration;
+    const rawDuration = typeof song.duration === 'number' && song.duration > 0 ? song.duration : null;
+    duration = rawDuration ? rawDuration / 1000 : duration;
 
     if (totalTimeEl) totalTimeEl.textContent = formatTime(duration);
     updateUI(0);
@@ -513,7 +514,7 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
         audio.load();
     }
 
-    // Refresh lyrics panel if already open (From File 2)
+    // Refresh lyrics panel if already open
     if (lyricsVisible) {
         if (lyricsSongTitle) lyricsSongTitle.textContent = currentSongTitle;
         if (lyricsSongArtist) lyricsSongArtist.textContent = currentSongArtist;
@@ -537,7 +538,7 @@ export function setCurrentTime(seconds) {
     if (audio && !isNaN(audio.duration)) audio.currentTime = current;
 }
 
-// ─── Animation loop (Priority: File 2 implementation) ─────────────────────────
+// ─── Animation loop ─────────────────────────
 
 function animate(now) {
     const delta = (now - lastUpdate) / 1000;

@@ -44,7 +44,7 @@ if (process.env.NODE_ENV == 'production') {
                 ],
                 "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 "font-src": ["'self'", "https://fonts.gstatic.com"],
-                "script-src": ["'self'", "'unsafe-inline'"], // Allowed unsafe-inline for dev flexibility
+                "script-src": ["'self'", "'unsafe-inline'"],
                 "object-src": ["'none'"],
                 "upgrade-insecure-requests": [],
             },
@@ -66,8 +66,8 @@ const createLimiter = (options) =>
 
 // General API limiter – generous to allow normal continuous use
 const generalApiLimiter = createLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // 1000 requests per 15 minutes per IP
+    windowMs: 15 * 60 * 1000, 
+    max: 1000, 
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -77,8 +77,8 @@ const generalApiLimiter = createLimiter({
 
 // Auth-specific limiter – stricter to protect login/register
 const authLimiter = createLimiter({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // 10 auth attempts per 15 minutes per IP
+    windowMs: 15 * 60 * 1000,
+    max: 10, 
     standardHeaders: true,
     legacyHeaders: false,
     message: {

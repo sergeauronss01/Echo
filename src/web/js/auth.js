@@ -23,7 +23,7 @@ class AuthManager {
                 logInBtn.textContent    = 'Log in';
             }
             accountBtn && (accountBtn.style.display = 'none');
-        }
+        };
     }
 
     async checkAuthStatus() {

@@ -1,8 +1,8 @@
 // --- Fingerprinting Module ---
 // Audio identification through acoustic fingerprinting
 
-import { api } from '../api.js';
-import { authManager } from '../auth.js';
+import { api } from './api.js';
+import { authManager } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const fingerprintBtn = document.getElementById('navFingerprintBtn');

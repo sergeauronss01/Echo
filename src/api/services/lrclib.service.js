@@ -13,16 +13,13 @@ const lyricsQueue = new PQueue({
 
 export class LrclibService {
     constructor() {
-        // No API keys to check anymore! 
-        // We just define a User-Agent, which LRCLIB requests you use.
+        // We define a User-Agent, which LRCLIB requests use.
         this.userAgent = 'Echo/1.0 (https://github.com/sergeauronss01/echo)'; 
     }
 
     async searchLyrics(title, artist) {
         return await lyricsQueue.add(async () => {
             try {
-                // Since we only have title and artist, we must use the /search endpoint
-                // which returns an array of possible matches.
                 const params = new URLSearchParams({
                     q: `${title} ${artist}`
                 });
@@ -39,7 +36,6 @@ export class LrclibService {
 
                 const data = await response.json();
 
-                // Grab the first (best) match from the search results
                 if (data && data.length > 0) {
                     return this._formatResponse(data[0]);
                 }
@@ -55,7 +51,6 @@ export class LrclibService {
     async getTrackLyrics(trackId) {
         return await lyricsQueue.add(async () => {
             try {
-                // LRCLIB allows fetching directly by its own internal ID
                 const response = await fetch(
                     `${LRCLIB_API}/get/${trackId}`,
                     { 
@@ -80,8 +75,7 @@ export class LrclibService {
         });
     }
 
-    // BONUS: I added this method because it is the most accurate way 
-    // to use LRCLIB if your app happens to have the duration and album data.
+    // BONUS: it is the most accurate way to use LRCLIB if the app happens to have the duration and album data.
     async getExactLyrics(title, artist, album, durationInSeconds) {
         return await lyricsQueue.add(async () => {
             try {

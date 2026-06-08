@@ -223,6 +223,7 @@ class UIManager {
             <div class="modal-overlay" id="playlistModal">
                 <div class="modal-content">
                     <h3>Create New Playlist</h3>
+                    <p style="color: var(--text-dim); font-size: 13px; margin-top: -10px;">Your playlist will be private by default.</p>
                     <form id="createPlaylistForm">
                         <input type="text" id="playlistName" placeholder="Playlist Name" required>
                         <textarea id="playlistDesc" placeholder="Description (optional)"></textarea>

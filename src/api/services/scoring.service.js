@@ -28,10 +28,9 @@ export class ScoringService {
     scoreTitle(source, candidate) {
         if (!source || !candidate) return 0;
 
-        // Enhanced cleaning: removing more YouTube-specific clutter
         const clean = (str) => str.toLowerCase()
-            .replace(/\((?!remix)[^)]*\)/g, '') // Remove parens unless they contain "remix"
-            .replace(/\[[^\]]*\]/g, '')         // Remove all brackets
+            .replace(/\((?!remix)[^)]*\)/g, '') 
+            .replace(/\[[^\]]*\]/g, '')  
             .replace(/\b(official|video|audio|lyrics|4k|hd|vevo)\b/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -40,7 +39,7 @@ export class ScoringService {
         const c = clean(candidate);
 
         if (s === c) return 1.0;
-        if (c.includes(s) || s.includes(c)) return 0.90; // Increased from 0.85
+        if (c.includes(s) || s.includes(c)) return 0.90; 
 
         const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
@@ -55,26 +54,24 @@ export class ScoringService {
         if (s === c) return 1.0;
         if (c.includes(s) || s.includes(c)) return 0.95;
 
-        // Handle multiple artists with broader separators
         const sParts = s.split(/[,&]|\bfeat\b|\bft\b|\band\b/).map(p => p.trim());
         const cParts = c.split(/[,&]|\bfeat\b|\bft\b|\band\b/).map(p => p.trim());
         
         const hasOverlap = sParts.some(sp => cParts.some(cp => cp.includes(sp) || sp.includes(cp)));
-        if (hasOverlap) return 0.92; // Increased from 0.90
+        if (hasOverlap) return 0.92;
 
         const similarity = this.stringSimilarity(s, c);
         return Math.max(0, similarity);
     }
 
     scoreDuration(sourceDuration, candidateDuration) {
-        if (!sourceDuration || !candidateDuration) return 0.7; // Increased from 0.5
+        if (!sourceDuration || !candidateDuration) return 0.7;
 
         const sourceMs = typeof sourceDuration === 'string' ? parseInt(sourceDuration) : sourceDuration;
         const candidateMs = typeof candidateDuration === 'string' ? parseInt(candidateDuration) : candidateDuration;
 
         const diffMs = Math.abs(sourceMs - candidateMs);
         
-        // Much higher tolerance for YouTube intros/outros
         if (diffMs <= 30000) return 1.0;          // Perfect score up to 30s difference
         if (diffMs <= 60000) return 0.8;          // High score up to 1 minute
         if (diffMs <= 120000) return 0.5;         // Half points up to 2 minutes
@@ -106,17 +103,16 @@ export class ScoringService {
         return matrix[str2.length][str1.length];
     }
 
-    // Loosened thresholds to accept more results automatically
     isAutoAcceptable(score) {
-        return score >= 70; // Lowered from 80
+        return score >= 70; 
     }
 
     requiresReview(score) {
-        return score < 70 && score >= 45; // Lowered range from 60-80
+        return score < 70 && score >= 45;
     }
 
     isRejectable(score) {
-        return score < 45; // Lowered from 60
+        return score < 45;
     }
 }
 

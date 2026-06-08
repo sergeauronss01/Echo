@@ -3,13 +3,31 @@ import { authManager } from './auth.js';
 import { uiManager } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await authManager.checkAuthStatus();
-
+    await api.ready();
+    handleOAuthRedirect();
     setupNavigation();
     uiManager.showHome();
-
+    await authManager.checkAuthStatus();
     await setupPlaylistSidebar();
 });
+
+window.addEventListener('auth:ready', async () => {
+    await uiManager.showHome();
+    await setupPlaylistSidebar();
+});
+
+function handleOAuthRedirect() {
+    const params       = new URLSearchParams(window.location.search);
+    const token        = params.get('token');
+    const refreshToken = params.get('refreshToken');
+
+    if (token) {
+        api.setToken(token);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        authManager.isAuthenticated = true;
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+};
 
 function setupNavigation() {
     const homeBtn           = document.getElementById('homeBtn');
@@ -20,7 +38,7 @@ function setupNavigation() {
     const logInBtn          = document.getElementById('logInBtn');
     const accountBtn        = document.getElementById('account');
 
-    homeBtn?.addEventListener('click',        () => uiManager.showHome());
+    homeBtn?.addEventListener('click', async () => await uiManager.showHome());
     navLibraryBtn?.addEventListener('click',  () => uiManager.showLibraryView());
     navDownloadBtn?.addEventListener('click', () => uiManager.showBatchDownloadView());
 
@@ -98,16 +116,5 @@ window.addEventListener('click', (e) => {
     }
 });
 
-(function handleOAuthRedirect() {
-    const params       = new URLSearchParams(window.location.search);
-    const token        = params.get('token');
-    const refreshToken = params.get('refreshToken');
-
-    if (token) {
-        api.setToken(token);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-})();
 
 export { uiManager, authManager, api };

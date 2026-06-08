@@ -149,13 +149,12 @@ Echo/
         ├── assets/            # SVG icons, fallback cover image
         ├── css/main.css
         └── js/
-            ├── api.js         # All fetch calls; token refresh logic; normalizeSong
-            ├── auth.js        # AuthManager: login, register, Google OAuth, profile
-            ├── main.js        # Bootstrap, navigation wiring, global click delegation
-            ├── player.js      # Audio element control, timeline, playback logging
-            ├── ui.js          # All view renderers (home, search, library, history…)
-            └── modules/
-                └── fingerprinting.js  # Fingerprint UI: upload, record, history
+            ├── api.js             # All fetch calls; token refresh logic; normalizeSong
+            ├── auth.js            # AuthManager: login, register, Google OAuth, profile
+            ├── main.js            # Bootstrap, navigation wiring, global click delegation
+            ├── player.js          # Audio element control, timeline, playback logging
+            ├── ui.js              # All view renderers (home, search, library, history…)
+            └── fingerprinting.js  # Fingerprint UI: upload, record, history
 ```
 
 ---

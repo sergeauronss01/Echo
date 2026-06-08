@@ -41,13 +41,11 @@ export class MusicBrainzService {
     }
 
     async searchByTitleArtistDuration(title, artist, durationMs) {
-        // 1. Clean the title of "junk" so MusicBrainz can find it
         const cleanTitle = title
             .replace(/\(Official.*\)|\[Official.*\]/gi, '')
             .replace(/official\s+(video|audio|music\s+video)/gi, '')
             .trim();
 
-        // 2. BROAD SEARCH: Remove "AND length" to stop silent failures
         const queryStr = `recording:"${cleanTitle}" AND artist:"${artist}"`;
         
         try {
@@ -86,7 +84,7 @@ export class MusicBrainzService {
                 year: year,
                 album: album,
                 genre: genre,
-                coverArtUrl: coverArtUrl, // New Field from MusicBrainz
+                coverArtUrl: coverArtUrl,
                 score: rec.score
             };
         });

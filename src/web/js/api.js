@@ -5,6 +5,18 @@ class APIService {
     constructor() {
         this.baseUrl = '/api';
         this.token = localStorage.getItem('token');
+        this.supabaseUrl = null;
+        this._configPromise = this._loadConfig(); 
+    }
+
+    async _loadConfig() {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        this.supabaseUrl = config.supabaseUrl;
+    }
+
+    async ready() {
+        await this._configPromise; 
     }
 
     getHeaders(includeAuth = true) {
