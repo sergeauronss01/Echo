@@ -800,7 +800,7 @@ Set all JWT secrets and Supabase keys to production values. Never commit `.env`.
 |---|---|
 | Queue / next track | No automatic queue. After a song ends, playback stops (or repeats if repeat is on). |
 | Admin panel | `requireAdmin` works but there is no UI to set a user's role to 'admin'. Do it directly in Supabase: `UPDATE users SET role = 'admin' WHERE email = 'you@example.com';` |
-| Lyrics display | Lyrics are stored in the DB but there is no UI view to display them yet. |
+
 | Cover Art Archive | CAA images sometimes return 404 for releases without uploaded art. The browser falls back to the YouTube thumbnail via the `onerror` handler. |
 | YouTube quota | 10 000 units/day free. Each batch download uses 2 units/song. At scale, consider caching search results. |
 | Single-user design | There are no access controls between users beyond ownership checks on playlists and library. All songs in the `songs` table are visible to all users. |
