@@ -487,6 +487,16 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
         currentQueueIndex = 0;
         isPlaylistMode = false;
     }
+    const lyricsAlreadyPresent = song.lyrics_content != null || song.synced_lyrics != null;
+    if (!lyricsAlreadyPresent) {
+        try {
+            const full = await api.getSongDetails(song.id);
+            const fullSong = full?.data ?? full;
+            song = { ...song, ...fullSong };
+        } catch (err) {
+            console.warn('Could not fetch full song details for lyrics:', err.message);
+        }
+    }
 
     // Lyrics State 
     currentPlainLyrics = song.lyrics_content || null;

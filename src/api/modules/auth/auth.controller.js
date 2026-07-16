@@ -5,7 +5,7 @@ import { google } from 'googleapis';
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CALLBACK_URL || 'http://0.0.0.0:3000/api/auth/google/callback'
+    process.env.GOOGLE_CALLBACK_URL
 );
 
 export class AuthController {
@@ -74,7 +74,7 @@ export class AuthController {
 
             const { user, token, refreshToken } = await AuthService.handleGoogleCallback(googleData);
 
-            const redirectUrl = `${process.env.FRONTEND_URL || 'http://0.0.0.0:3000'}?token=${token}&refreshToken=${refreshToken}`;
+            const redirectUrl = `${process.env.FRONTEND_URL}?token=${token}&refreshToken=${refreshToken}`;
             res.redirect(redirectUrl);
         } catch (err) {
             next(err);

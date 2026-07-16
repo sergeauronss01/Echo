@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 export const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    'http://0.0.0.0:3000/auth/callback'
+    process.env.GOOGLE_CALLBACK_URL
 );
 
 export const scopes = ['https://www.googleapis.com/auth/youtube.readonly'];
@@ -15,9 +15,8 @@ export const authorizationUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: scopes,
     include_granted_scopes: true,
-    prompt: 'consent' // Forces the refresh token to be sent
+    prompt: 'consent'
 });
-
 
 /*
 *Public Search
@@ -25,5 +24,5 @@ export const authorizationUrl = oauth2Client.generateAuthUrl({
 export const youtube = google.youtube({
     version: "v3",
     auth: process.env.YT_API_KEY,
-    headers: {'Referer': 'http://0.0.0.0:3000'}
+    headers: {'Referer': process.env.FRONTEND_URL}
 });
