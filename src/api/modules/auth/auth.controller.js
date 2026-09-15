@@ -66,7 +66,15 @@ export class AuthController {
                 throw new AppError('Authorization code missing', 400);
             }
 
-            const { tokens } = await oauth2Client.getToken(code);
+            let tokens;
+            try {
+                ({ tokens } = await oauth2Client.getToken(code));
+            } catch (err) {
+                if (err.response?.data?.error === 'invalid_grant') {
+                    throw new AppError('Google authorization expired or was already used. Please try again.', 400);
+                }
+                throw err;
+            }
             oauth2Client.setCredentials(tokens);
 
             const userinfo = await google.oauth2({ version: 'v2', auth: oauth2Client }).userinfo.get();

@@ -25,6 +25,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('trust proxy', 1);
 
 /* --- Security & Middleware --- */
 // Disable strict CSP in development so other PCs can load assets smoothly
