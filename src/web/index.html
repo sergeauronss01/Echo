@@ -16,7 +16,7 @@
     <title>Echo - Personal Music App</title>
 </head>
 <body>
-    <span id="logo">Echo</span>
+    <button id="logo" type="button" title="Home" aria-label="Home">Echo</button>
     <header>
         <button id="homeBtn" title="Home">
             <img src="assets/home_icon.svg" alt="home">
@@ -31,10 +31,18 @@
             </button>
         </form>
 
-        <button id="navLibraryBtn" title="My Library"><img src="assets/note.svg" alt="Song Library" class="action-btn"> Library</button>
-        <button id="navHistoryBtn" title="Listening History"> <img src="assets/history.svg" alt="History" class="action-btn"> History</button>
-        <button id="navDownloadBtn" title="Batch Download"> <img src="assets/download.svg" alt="Donwload Song" class="action-btn"> Download</button>
-        <button id="navFingerprintBtn" title="Identify Song"> <img src="assets/mic.svg" alt="Identify Song" class="action-btn"> Identify</button>
+        <div class="action-menu" id="actionMenu">
+            <button class="action-menu-toggle" id="actionMenuToggle"
+                    type="button" aria-expanded="false" aria-controls="actionMenuItems">
+                Menu
+            </button>
+            <div class="action-menu-items" id="actionMenuItems">
+                <button id="navLibraryBtn" title="My Library"><img src="assets/note.svg" alt="Song Library" class="action-btn"> Library</button>
+                <button id="navHistoryBtn" title="Listening History"> <img src="assets/history.svg" alt="History" class="action-btn"> History</button>
+                <button id="navDownloadBtn" title="Batch Download"> <img src="assets/download.svg" alt="Donwload Song" class="action-btn"> Download</button>
+                <button id="navFingerprintBtn" title="Identify Song"> <img src="assets/mic.svg" alt="Identify Song" class="action-btn"> Identify</button>
+            </div>
+        </div>
 
         <button id="logInBtn"  class="btn-primary">Log in</button>
         <button id="account"   class="account-btn" title="Account">

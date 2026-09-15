@@ -67,6 +67,7 @@ class AuthManager {
     }
 
     showAuthModal() {
+        document.body.dataset.view = 'other';
         const mainContainer = document.getElementById('view-container');
         mainContainer.innerHTML = `
             <div class="auth-container">
@@ -170,6 +171,7 @@ class AuthManager {
     }
 
     showProfileModal() {
+        document.body.dataset.view = 'other';
         if (!this.isAuthenticated) { this.showAuthModal(); return; }
 
         const mainContainer = document.getElementById('view-container');

@@ -24,6 +24,7 @@ class UIManager {
     // ── Home ────────────────────────────────────────────────────
 
     async showHome() {
+        document.body.dataset.view = 'home';
         const mainContainer = document.getElementById('view-container');
         mainContainer.innerHTML = `
             <div class="home-view">
@@ -154,6 +155,7 @@ class UIManager {
     // ── Batch Download ──────────────────────────────────────────
 
     async showBatchDownloadView() {
+        document.body.dataset.view = 'other';
         const mainContainer = document.getElementById('view-container');
         mainContainer.innerHTML = `
             <div class="batch-download-container">
@@ -258,6 +260,7 @@ class UIManager {
     }
 
     async showPlaylistView(playlistId) {
+        document.body.dataset.view = 'other';
         const mainContainer = document.getElementById('view-container');
         mainContainer.innerHTML = '<div class="loading">Loading playlist…</div>';
 
@@ -330,6 +333,7 @@ class UIManager {
     // ── Library ─────────────────────────────────────────────────
 
     async showLibraryView() {
+        document.body.dataset.view = 'other';
         const mainContainer = document.getElementById('view-container');
 
         if (!authManager.isAuthenticated) {
@@ -366,6 +370,7 @@ class UIManager {
     // ── History ─────────────────────────────────────────────────
 
     async showHistoryView() {
+        document.body.dataset.view = 'other';
         const mainContainer = document.getElementById('view-container');
 
         if (!authManager.isAuthenticated) {

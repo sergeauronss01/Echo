@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadFingerprintView() {
+    document.body.dataset.view = 'other';
     const viewContainer = document.getElementById('view-container');
     const token = localStorage.getItem('token');
 

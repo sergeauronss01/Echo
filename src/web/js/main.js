@@ -30,7 +30,10 @@ function handleOAuthRedirect() {
 };
 
 function setupNavigation() {
+    const logo              = document.getElementById('logo');
     const homeBtn           = document.getElementById('homeBtn');
+    const actionMenuToggle  = document.getElementById('actionMenuToggle');
+    const actionMenu        = document.getElementById('actionMenu');
     const navLibraryBtn     = document.getElementById('navLibraryBtn');
     const navHistoryBtn     = document.getElementById('navHistoryBtn');
     const navDownloadBtn    = document.getElementById('navDownloadBtn');
@@ -38,8 +41,15 @@ function setupNavigation() {
     const logInBtn          = document.getElementById('logInBtn');
     const accountBtn        = document.getElementById('account');
 
-    homeBtn?.addEventListener('click', async () => await uiManager.showHome());
-    navLibraryBtn?.addEventListener('click',  () => uiManager.showLibraryView());
+    const showHome = async () => {
+        await uiManager.showHome();
+        actionMenu?.classList.remove('open');
+        actionMenuToggle?.setAttribute('aria-expanded', 'false');
+    };
+
+    logo?.addEventListener('click', showHome);
+    homeBtn?.addEventListener('click', showHome);
+    navLibraryBtn?.addEventListener('click', () => uiManager.showLibraryView());
     navDownloadBtn?.addEventListener('click', () => uiManager.showBatchDownloadView());
 
     navHistoryBtn?.addEventListener('click', () => {
@@ -53,6 +63,18 @@ function setupNavigation() {
     navFingerprintBtn?.addEventListener('click', () => {
         // Fingerprinting view is handled by fingerprinting.js which listens
         // on the same button. This stub is kept for explicit documentation.
+    });
+
+    actionMenuToggle?.addEventListener('click', () => {
+        const isOpen = actionMenu?.classList.toggle('open') || false;
+        actionMenuToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    document.addEventListener('click', (event) => {
+        if (actionMenu && !actionMenu.contains(event.target)) {
+            actionMenu.classList.remove('open');
+            actionMenuToggle?.setAttribute('aria-expanded', 'false');
+        }
     });
 
     logInBtn?.addEventListener('click',  () => authManager.showAuthModal());
