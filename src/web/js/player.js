@@ -59,8 +59,6 @@ let isPlaylistMode = false;
 let isShuffleMode = false;
 let shuffledQueue = [];
 
-const supabaseUrl = 'https://outtpsqnptpihgyhznmy.supabase.co';
-
 // ─── Lyrics State ───────────────────────────────────────────────
 
 let currentPlainLyrics = null;   
@@ -503,8 +501,8 @@ export async function loadSong(song, queueToLoad = null, isPlaylist = false) {
     syncedLyricsData = parseLRC(song.synced_lyrics || null);
     lastActiveLyricsIndex = -1;
 
-    // Stream URL 
-    const streamUrl = `${supabaseUrl}/storage/v1/object/public/songs/audio/${song.youtube_id}.m4a`;
+    // Use the stored URL so both legacy M4A and Tubidy MP3 files play correctly.
+    const streamUrl = song.file_path || await api.getStreamUrl(song.id);
 
     if (songNameEl) songNameEl.textContent = currentSongTitle;
     if (artistNameEl) artistNameEl.textContent = currentSongArtist;

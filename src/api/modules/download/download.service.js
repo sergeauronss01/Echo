@@ -164,30 +164,50 @@ export class DownloadService {
 
         try {
             const results = await tubidy.search(queryText, 1);
-            const match = results?.[0];
-            if (!match?.id) return null;
-
-            const review = await tubidy.review(match.id);
-            if (review?.error || !review?.success) return null;
-
-            const links = await tubidy.download(match.id, 'mp3audio');
-            if (!links?.download) return null;
-
-            const response = await fetch(links.download);
-            if (!response.ok || !response.body) {
-                throw new Error(`Tubidy download returned HTTP ${response.status}`);
+            const outputPath = path.join(DOWNLOAD_DIR, `${videoId}.mp3`);
+            if (!results?.length) {
+                console.warn(`Tubidy returned no results for "${queryText}"`);
+                return null;
             }
 
-            const outputPath = path.join(DOWNLOAD_DIR, `${videoId}.mp3`);
-            await new Promise((resolve, reject) => {
-                const output = fs.createWriteStream(outputPath);
-                response.body.pipe(output);
-                response.body.on('error', reject);
-                output.on('finish', resolve);
-                output.on('error', reject);
-            });
+            for (const match of results) {
+                if (!match?.id) continue;
 
-            return outputPath;
+                const review = await tubidy.review(match.id);
+                if (review?.error || !review?.success) {
+                    console.warn(`Tubidy result unavailable for "${match.title}": ${review?.error || 'unknown reason'}`);
+                    continue;
+                }
+
+                const links = await tubidy.download(match.id, 'mp3audio');
+                if (!links?.download) {
+                    console.warn(`Tubidy result has no MP3 link for "${match.title}"`);
+                    continue;
+                }
+
+                const response = await fetch(links.download);
+                if (!response.ok || !response.body) {
+                    console.warn(`Tubidy MP3 request failed for "${match.title}" with HTTP ${response.status}`);
+                    continue;
+                }
+
+                try {
+                    await new Promise((resolve, reject) => {
+                        const output = fs.createWriteStream(outputPath);
+                        response.body.pipe(output);
+                        response.body.on('error', reject);
+                        output.on('finish', resolve);
+                        output.on('error', reject);
+                    });
+                    return outputPath;
+                } catch (err) {
+                    fs.rmSync(outputPath, { force: true });
+                    console.warn(`Tubidy MP3 transfer failed for "${match.title}": ${err.message}`);
+                }
+            }
+
+            console.error(`Tubidy found no downloadable MP3 for "${queryText}"`);
+            return null;
         } catch (err) {
             console.error(`Tubidy download error for "${queryText}":`, err.message);
             return null;
