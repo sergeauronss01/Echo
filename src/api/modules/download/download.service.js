@@ -1,9 +1,9 @@
 import songsService from '../songs/songs.service.js';
-import { promisify } from 'node:util';
-import { execFile }  from 'node:child_process';
 import { query }     from '../../config/database.js';
 import { google }    from 'googleapis';
 import { AppError }  from '../../middleware/error.middleware.js';
+import { createRequire } from 'node:module';
+import fetch from 'node-fetch';
 import fs   from 'fs';
 import path from 'path';
 import os   from 'os';
@@ -12,8 +12,9 @@ import scoringService     from '../../services/scoring.service.js';
 import LrclibService      from '../../services/lrclib.service.js';
 import { createClient }   from '@supabase/supabase-js';
 
-const execFileAsync = promisify(execFile);
-const readdirAsync  = promisify(fs.readdir);
+const require = createRequire(import.meta.url);
+const { Tubidy } = require('tubidy-scrape');
+const tubidy = Tubidy();
 
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR
     || path.join(os.homedir(), 'Downloads', 'echo-downloads');
@@ -139,7 +140,7 @@ export class DownloadService {
     async uploadToSupabase(filePath, fileName) {
         const fileBuffer = fs.readFileSync(filePath);
         const ext        = path.extname(fileName).toLowerCase();
-        const contentType = ext === '.webm' ? 'audio/webm' : 'audio/mp4';
+        const contentType = ext === '.mp3' ? 'audio/mpeg' : ext === '.webm' ? 'audio/webm' : 'audio/mp4';
 
         const { error } = await supabase.storage
             .from('songs')
@@ -154,29 +155,41 @@ export class DownloadService {
         return urlData.publicUrl;
     }
 
-    // ── yt-dlp download ─────────────────────────────────────────
+    // ── Tubidy download ────────────────────────────────────────
 
-    async downloadSong(youtubeUrl, videoId) {
+    async downloadSong(queryText, videoId) {
         if (!fs.existsSync(DOWNLOAD_DIR)) {
             fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
         }
 
         try {
-            const python = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
-            const template = path.join(DOWNLOAD_DIR, `${videoId}.%(ext)s`);
+            const results = await tubidy.search(queryText, 1);
+            const match = results?.[0];
+            if (!match?.id) return null;
 
-            await execFileAsync(python, [
-                '-m', 'yt_dlp',
-                '-f', 'ba[ext=m4a]/ba[ext=webm]/ba',
-                '--output', template,
-                youtubeUrl,
-            ], { timeout: 300_000 });
+            const review = await tubidy.review(match.id);
+            if (review?.error || !review?.success) return null;
 
-            const files = await readdirAsync(DOWNLOAD_DIR);
-            const found = files.find(f => f.startsWith(videoId));
-            return found ? path.join(DOWNLOAD_DIR, found) : null;
+            const links = await tubidy.download(match.id, 'mp3audio');
+            if (!links?.download) return null;
+
+            const response = await fetch(links.download);
+            if (!response.ok || !response.body) {
+                throw new Error(`Tubidy download returned HTTP ${response.status}`);
+            }
+
+            const outputPath = path.join(DOWNLOAD_DIR, `${videoId}.mp3`);
+            await new Promise((resolve, reject) => {
+                const output = fs.createWriteStream(outputPath);
+                response.body.pipe(output);
+                response.body.on('error', reject);
+                output.on('finish', resolve);
+                output.on('error', reject);
+            });
+
+            return outputPath;
         } catch (err) {
-            console.error(`Download error for ${youtubeUrl}:`, err.message);
+            console.error(`Tubidy download error for "${queryText}":`, err.message);
             return null;
         }
     }
@@ -199,9 +212,7 @@ export class DownloadService {
                 }
 
                 // 2. Download locally
-                const localFilePath = await this.downloadSong(
-                    `https://www.youtube.com/watch?v=${videoId}`, videoId
-                );
+                const localFilePath = await this.downloadSong(q, videoId);
                 if (!localFilePath) {
                     results.push({ query: q, success: false, error: 'Download failed' });
                     continue;

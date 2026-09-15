@@ -27,15 +27,11 @@ export class SongsController {
             const { songId } = req.params;
             const song = await songsService.getSong(parseInt(songId));
 
-            if (!song || !song.youtube_id) {
+            if (!song || !song.file_path) {
                 return res.status(404).json({ message: 'Song not found' });
             }
 
-            const supabaseUrl = process.env.SUPABASE_URL;
-            const bucketName = 'songs/audio';
-            const streamUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${song.youtube_id}.m4a`;
-
-            res.json({ streamUrl });
+            res.json({ streamUrl: song.file_path });
         } catch (err) {
             next(err);
         }
